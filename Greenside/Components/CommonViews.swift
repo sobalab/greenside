@@ -221,9 +221,13 @@ struct StatColumn: View {
             Text(label.uppercased())
                 .font(Theme.Typography.caption)
                 .tracking(0.6)
+                .lineLimit(1)
+                .minimumScaleFactor(0.75)
                 .foregroundStyle(onDark ? Theme.Palette.onDarkSecondary : Theme.Palette.inkSecondary)
             Text(value)
                 .font(Theme.Typography.title2)
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
                 .foregroundStyle(onDark ? Theme.Palette.onDark : Theme.Palette.ink)
         }
     }

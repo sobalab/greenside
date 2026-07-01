@@ -1,59 +1,31 @@
 import SwiftUI
 
-/// The four-tab shell that matches the design's tab bar: Home, Browse, Book, Profile.
-///
-/// Tab contents are placeholders for now — real screens are built next, in order.
-/// The structure, shared state wiring, and tab bar are in place so the app runs.
+/// The four-tab shell: Home, Browse, Book, Profile. Each tab hosts a
+/// self-contained screen — the tab-root screens own their own navigation, and
+/// the Book tab hosts the 3-step booking wizard. The selected tab is driven by
+/// `AppState` so screens can switch tabs programmatically (e.g. Home's
+/// "Browse courses" action, or "Book" from a course detail screen).
 struct MainTabView: View {
     @Environment(AppState.self) private var appState
 
     var body: some View {
-        TabView {
-            ScreenPlaceholder(name: "Home", systemImage: "house.fill")
+        @Bindable var appState = appState
+        TabView(selection: $appState.selectedTab) {
+            HomeView()
                 .tabItem { Label("Home", systemImage: "house") }
+                .tag(AppTab.home)
 
-            ScreenPlaceholder(name: "Browse", systemImage: "magnifyingglass")
+            BrowseView()
                 .tabItem { Label("Browse", systemImage: "magnifyingglass") }
+                .tag(AppTab.browse)
 
-            // Book tab hosts the 3-step wizard driven by the shared BookingViewModel.
-            NavigationStack(path: bookingPath) {
-                ScreenPlaceholder(name: "Book", systemImage: "calendar")
-            }
-            .tabItem { Label("Book", systemImage: "calendar") }
+            BookRootView()
+                .tabItem { Label("Book", systemImage: "calendar") }
+                .tag(AppTab.book)
 
-            ScreenPlaceholder(name: "Profile", systemImage: "person.fill")
+            ProfileView()
                 .tabItem { Label("Profile", systemImage: "person") }
-        }
-    }
-
-    /// Binding into the shared booking view model's navigation path.
-    private var bookingPath: Binding<[BookingRoute]> {
-        Binding(
-            get: { appState.booking.path },
-            set: { appState.booking.path = $0 }
-        )
-    }
-}
-
-/// Placeholder tab body shown until the real screen is implemented.
-struct ScreenPlaceholder: View {
-    let name: String
-    let systemImage: String
-
-    var body: some View {
-        ZStack {
-            Theme.Palette.background.ignoresSafeArea()
-            VStack(spacing: Theme.Spacing.md) {
-                Image(systemName: systemImage)
-                    .font(.system(size: 40, weight: .semibold))
-                    .foregroundStyle(Theme.Palette.primary)
-                Text(name)
-                    .font(Theme.Typography.title)
-                    .foregroundStyle(Theme.Palette.ink)
-                Text("Coming next")
-                    .font(Theme.Typography.footnote)
-                    .foregroundStyle(Theme.Palette.inkSecondary)
-            }
+                .tag(AppTab.profile)
         }
     }
 }
