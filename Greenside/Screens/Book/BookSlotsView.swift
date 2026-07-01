@@ -137,6 +137,7 @@ struct BookSlotsView: View {
                             isSelected: Calendar.current.isDate(booking.date, inSameDayAs: day),
                             isToday: Calendar.current.isDateInToday(day)
                         ) {
+                            Haptics.selection()
                             Task { await booking.selectDate(day) }
                         }
                     }
@@ -208,6 +209,7 @@ struct BookSlotsView: View {
                         teeTime: teeTime,
                         isSelected: booking.selectedTeeTime?.id == teeTime.id
                     ) {
+                        Haptics.selection()
                         booking.select(teeTime: teeTime)
                     }
                 }
@@ -268,6 +270,7 @@ struct BookSlotsView: View {
             }
 
             Button("Continue") {
+                Haptics.impact()
                 booking.goToConfirmProfile()
             }
             .buttonStyle(GSPrimaryButtonStyle(enabled: booking.canContinueFromSlots))

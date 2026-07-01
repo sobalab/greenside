@@ -26,22 +26,25 @@ struct CourseImage: View {
 struct CourseImagePlaceholder: View {
     let seed: String
 
+    // Deep green bases so the valley→summit contour ramp reads on top.
     private static let palettes: [[Color]] = [
-        [Color(hex: 0x2F5A38), Color(hex: 0x6FA24C)],
-        [Color(hex: 0x1F4A38), Color(hex: 0x3F7D5A)],
-        [Color(hex: 0x3B5A2B), Color(hex: 0x86A957)],
-        [Color(hex: 0x24503A), Color(hex: 0x5E9E7A)],
-        [Color(hex: 0x2C5140), Color(hex: 0x7FB26A)],
+        [Color(hex: 0x1C3B2C), Color(hex: 0x2E5D3A)],
+        [Color(hex: 0x18342A), Color(hex: 0x2A5540)],
+        [Color(hex: 0x203A22), Color(hex: 0x37582F)],
+        [Color(hex: 0x1B4034), Color(hex: 0x2C5A45)],
+        [Color(hex: 0x22462F), Color(hex: 0x315C3A)],
     ]
 
     var body: some View {
-        let palette = Self.palettes[Self.stableHash(seed) % Self.palettes.count]
+        let hash = Self.stableHash(seed)
+        let palette = Self.palettes[hash % Self.palettes.count]
         ZStack {
             LinearGradient(colors: palette, startPoint: .topLeading, endPoint: .bottomTrailing)
-            TopographicLines(color: .white, opacity: 0.10)
+            // The full-colour animated topographic survey — golf-course contours.
+            AnimatedTopographicField(seed: hash, config: .card)
             Image(systemName: "flag.fill")
-                .font(.system(size: 24, weight: .semibold))
-                .foregroundStyle(.white.opacity(0.35))
+                .font(.system(size: 22, weight: .semibold))
+                .foregroundStyle(.white.opacity(0.28))
         }
     }
 

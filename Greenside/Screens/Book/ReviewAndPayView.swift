@@ -6,6 +6,8 @@ import SwiftUI
 /// `draft` booking.
 struct ReviewAndPayView: View {
     @Environment(AppState.self) private var appState
+    @State private var showPaymentSheet = false
+    @State private var selectedCard = PaymentCard.options[0]
 
     var body: some View {
         @Bindable var booking = appState.booking
@@ -26,6 +28,9 @@ struct ReviewAndPayView: View {
             if let draft = booking.draft {
                 payBar(booking: booking, draft: draft)
             }
+        }
+        .sheet(isPresented: $showPaymentSheet) {
+            PaymentPickerSheet(selected: $selectedCard)
         }
     }
 
@@ -115,39 +120,49 @@ struct ReviewAndPayView: View {
     // MARK: - Payment method
 
     private var paymentMethod: some View {
-        HStack(spacing: Theme.Spacing.md) {
-            Image(systemName: "creditcard.fill")
-                .font(.system(size: 18, weight: .semibold))
-                .foregroundStyle(Theme.Palette.primary)
-                .frame(width: 44, height: 44)
-                .background(
-                    Theme.Palette.surfaceMuted,
-                    in: RoundedRectangle(cornerRadius: Theme.Radius.sm, style: .continuous)
-                )
+        Button {
+            Haptics.tap()
+            showPaymentSheet = true
+        } label: {
+            HStack(spacing: Theme.Spacing.md) {
+                Image(systemName: selectedCard.systemImage)
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundStyle(Theme.Palette.primary)
+                    .frame(width: 44, height: 44)
+                    .background(
+                        Theme.Palette.surfaceMuted,
+                        in: RoundedRectangle(cornerRadius: Theme.Radius.sm, style: .continuous)
+                    )
 
-            VStack(alignment: .leading, spacing: 2) {
-                Text("Visa ending 4242")
-                    .font(Theme.Typography.headline)
-                    .foregroundStyle(Theme.Palette.ink)
-                Text("Default payment method")
-                    .font(Theme.Typography.footnote)
-                    .foregroundStyle(Theme.Palette.inkSecondary)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(selectedCard.displayName)
+                        .font(Theme.Typography.headline)
+                        .foregroundStyle(Theme.Palette.ink)
+                    Text("Default payment method")
+                        .font(Theme.Typography.footnote)
+                        .foregroundStyle(Theme.Palette.inkSecondary)
+                }
+
+                Spacer(minLength: Theme.Spacing.sm)
+
+                Text("Change")
+                    .font(Theme.Typography.callout)
+                    .foregroundStyle(Theme.Palette.accent)
             }
-
-            Spacer(minLength: Theme.Spacing.sm)
-
-            Text("Change")
-                .font(Theme.Typography.callout)
-                .foregroundStyle(Theme.Palette.accent)
+            .gsCard()
         }
-        .gsCard()
+        .buttonStyle(.plain)
     }
 
     // MARK: - Pay bar
 
     private func payBar(booking: BookingViewModel, draft: Booking) -> some View {
         Button {
-            Task { await booking.confirmAndPay() }
+            Task {
+                Haptics.impact()
+                await booking.confirmAndPay()
+                Haptics.success()
+            }
         } label: {
             if booking.isProcessingPayment {
                 ProgressView()
@@ -273,6 +288,76 @@ private struct PriceRow: View {
                 .font(Theme.Typography.callout)
                 .foregroundStyle(Theme.Palette.ink)
         }
+    }
+}
+
+// MARK: - Payment method picker
+
+private struct PaymentCard: Identifiable, Hashable {
+    let id = UUID()
+    let brand: String
+    let last4: String
+    let systemImage: String
+
+    var displayName: String {
+        last4.isEmpty ? brand : "\(brand) ending \(last4)"
+    }
+
+    static let options: [PaymentCard] = [
+        PaymentCard(brand: "Visa", last4: "4242", systemImage: "creditcard.fill"),
+        PaymentCard(brand: "Mastercard", last4: "8319", systemImage: "creditcard.fill"),
+        PaymentCard(brand: "Apple Pay", last4: "", systemImage: "applelogo"),
+    ]
+}
+
+private struct PaymentPickerSheet: View {
+    @Binding var selected: PaymentCard
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(spacing: Theme.Spacing.sm) {
+                    ForEach(PaymentCard.options) { card in
+                        Button {
+                            Haptics.selection()
+                            selected = card
+                            dismiss()
+                        } label: {
+                            HStack(spacing: Theme.Spacing.md) {
+                                Image(systemName: card.systemImage)
+                                    .font(.system(size: 18, weight: .semibold))
+                                    .foregroundStyle(Theme.Palette.primary)
+                                    .frame(width: 44, height: 44)
+                                    .background(
+                                        Theme.Palette.surfaceMuted,
+                                        in: RoundedRectangle(cornerRadius: Theme.Radius.sm, style: .continuous)
+                                    )
+                                Text(card.displayName)
+                                    .font(Theme.Typography.headline)
+                                    .foregroundStyle(Theme.Palette.ink)
+                                Spacer(minLength: Theme.Spacing.sm)
+                                Image(systemName: selected == card ? "checkmark.circle.fill" : "circle")
+                                    .font(.system(size: 22))
+                                    .foregroundStyle(selected == card ? Theme.Palette.primary : Theme.Palette.inkTertiary)
+                            }
+                            .gsCard()
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+                .padding(Theme.screenPadding)
+            }
+            .background(Theme.Palette.background)
+            .navigationTitle("Payment method")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Done") { dismiss() }
+                }
+            }
+        }
+        .presentationDetents([.medium])
     }
 }
 

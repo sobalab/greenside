@@ -7,6 +7,7 @@ struct CourseDetailView: View {
     let course: Course
 
     @Environment(AppState.self) private var appState
+    @State private var isSaved = false
 
     var body: some View {
         ScrollView {
@@ -77,6 +78,24 @@ struct CourseDetailView: View {
             .padding(Theme.screenPadding)
         }
         .frame(height: 300)
+        .overlay(alignment: .topTrailing) { saveButton }
+    }
+
+    private var saveButton: some View {
+        Button {
+            Haptics.tap()
+            isSaved.toggle()
+        } label: {
+            Image(systemName: isSaved ? "heart.fill" : "heart")
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundStyle(isSaved ? Theme.Palette.lime : .white)
+                .frame(width: 40, height: 40)
+                .background(.ultraThinMaterial, in: Circle())
+                .overlay(Circle().stroke(.white.opacity(0.25), lineWidth: 1))
+        }
+        .padding(.top, 54)
+        .padding(.trailing, Theme.screenPadding)
+        .animation(.easeOut(duration: 0.15), value: isSaved)
     }
 
     // MARK: - Stats
@@ -175,6 +194,7 @@ struct CourseDetailView: View {
                 .fill(Theme.Palette.hairline)
                 .frame(height: 1)
             Button {
+                Haptics.impact()
                 appState.booking.start(course: course)
                 appState.selectedTab = .book
             } label: {

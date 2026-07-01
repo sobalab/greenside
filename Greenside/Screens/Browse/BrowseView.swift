@@ -50,6 +50,7 @@ struct BrowseView: View {
                 .padding(.bottom, Theme.Spacing.xxxl)
             }
             .background(Theme.Palette.background.ignoresSafeArea())
+            .scrollDismissesKeyboard(.immediately)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar(.hidden, for: .navigationBar)
             .navigationDestination(for: Course.self) { CourseDetailView(course: $0) }
@@ -100,6 +101,7 @@ struct BrowseView: View {
     }
 
     private func toggle(_ filter: CourseFilter) {
+        Haptics.selection()
         if selected.contains(filter) {
             selected.remove(filter)
         } else {

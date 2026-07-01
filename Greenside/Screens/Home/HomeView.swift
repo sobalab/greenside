@@ -48,11 +48,17 @@ struct HomeView: View {
                 greeting
             }
             Spacer(minLength: Theme.Spacing.sm)
-            AvatarView(
-                name: profile?.fullName ?? "Golfer",
-                imageName: profile?.avatarImageName,
-                size: 46
-            )
+            Button {
+                Haptics.tap()
+                appState.selectedTab = .profile
+            } label: {
+                AvatarView(
+                    name: profile?.fullName ?? "Golfer",
+                    imageName: profile?.avatarImageName,
+                    size: 46
+                )
+            }
+            .buttonStyle(.plain)
         }
     }
 
@@ -73,7 +79,10 @@ struct HomeView: View {
     @ViewBuilder
     private var heroSection: some View {
         if let next {
-            NextRoundHero(booking: next)
+            NavigationLink(value: next.course) {
+                NextRoundHero(booking: next)
+            }
+            .buttonStyle(.plain)
         } else {
             NoUpcomingCard { appState.selectedTab = .book }
         }

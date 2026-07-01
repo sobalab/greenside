@@ -9,6 +9,7 @@ struct ProfileView: View {
     @State private var profile: UserProfile?
     @State private var activity: [LoyaltyActivity] = []
     @State private var rounds: [Booking] = []
+    @State private var showSignOutConfirm = false
 
     var body: some View {
         NavigationStack {
@@ -21,6 +22,16 @@ struct ProfileView: View {
             }
             .background(Theme.Palette.background)
             .navigationTitle("Profile")
+            .navigationDestination(for: Course.self) { course in
+                CourseDetailView(course: course)
+            }
+            .confirmationDialog("Sign out of Greenside?", isPresented: $showSignOutConfirm, titleVisibility: .visible) {
+                Button("Sign out", role: .destructive) {
+                    Haptics.impact()
+                    appState.signOut()
+                }
+                Button("Cancel", role: .cancel) {}
+            }
         }
         .task {
             profile = await appState.service.currentUser()
@@ -63,7 +74,8 @@ struct ProfileView: View {
             }
 
             Button {
-                appState.signOut()
+                Haptics.tap()
+                showSignOutConfirm = true
             } label: {
                 HStack(spacing: Theme.Spacing.xs) {
                     Image(systemName: "rectangle.portrait.and.arrow.right")
@@ -270,7 +282,10 @@ private struct RoundsCard: View {
     var body: some View {
         VStack(spacing: 0) {
             ForEach(Array(rounds.enumerated()), id: \.element.id) { index, booking in
-                RoundRow(booking: booking)
+                NavigationLink(value: booking.course) {
+                    RoundRow(booking: booking)
+                }
+                .buttonStyle(.plain)
                 if index < rounds.count - 1 {
                     Divider()
                         .overlay(Theme.Palette.hairline)
@@ -310,6 +325,10 @@ private struct RoundRow: View {
                     .font(Theme.Typography.caption)
                     .foregroundStyle(Theme.Palette.inkTertiary)
             }
+
+            Image(systemName: "chevron.right")
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(Theme.Palette.inkTertiary)
         }
         .padding(.vertical, Theme.Spacing.sm)
     }
