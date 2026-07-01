@@ -14,14 +14,14 @@ struct HomeView: View {
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(alignment: .leading, spacing: Theme.Spacing.xl) {
+                VStack(alignment: .leading, spacing: Theme.Spacing.xxl) {
                     header
                     heroSection
                     quickActions
                     recommendedSection
                 }
                 .padding(.horizontal, Theme.screenPadding)
-                .padding(.top, Theme.Spacing.xs)
+                .padding(.top, Theme.Spacing.sm)
                 .padding(.bottom, Theme.Spacing.xxl)
                 .navigationDestination(for: Course.self) { course in
                     CourseDetailView(course: course)
@@ -43,7 +43,7 @@ struct HomeView: View {
 
     private var header: some View {
         HStack(alignment: .top, spacing: Theme.Spacing.md) {
-            VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
+            VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
                 EyebrowText(todayString)
                 greeting
             }
@@ -55,23 +55,27 @@ struct HomeView: View {
                 AvatarView(
                     name: profile?.fullName ?? "Golfer",
                     imageName: profile?.avatarImageName,
-                    size: 46
+                    size: 50
                 )
             }
-            .buttonStyle(.plain)
+            .buttonStyle(PressScaleStyle(scale: 0.92))
+            .padding(.top, Theme.Spacing.md)
         }
     }
 
+    /// Big editorial greeting — "Good <part>," on one line, the first name in
+    /// accent green beneath it. Both lines guard against bad wrapping.
     private var greeting: some View {
-        HStack(spacing: 0) {
-            Text("Good \(partOfDay), ")
+        VStack(alignment: .leading, spacing: -2) {
+            Text("Good \(partOfDay),")
                 .foregroundStyle(Theme.Palette.ink)
             Text(firstName)
-                .foregroundStyle(Theme.Palette.primary)
+                .foregroundStyle(Theme.Palette.accent)
         }
-        .font(Theme.Typography.largeTitle)
+        .font(Theme.Typography.display(40, .bold))
         .lineLimit(1)
-        .minimumScaleFactor(0.7)
+        .minimumScaleFactor(0.6)
+        .animation(.spring(response: 0.4, dampingFraction: 0.85), value: firstName)
     }
 
     // MARK: - Hero
@@ -82,7 +86,8 @@ struct HomeView: View {
             NavigationLink(value: next.course) {
                 NextRoundHero(booking: next)
             }
-            .buttonStyle(.plain)
+            .buttonStyle(PressScaleStyle())
+            .animation(.spring(response: 0.4, dampingFraction: 0.85), value: next.id)
         } else {
             NoUpcomingCard { appState.selectedTab = .book }
         }
@@ -92,12 +97,12 @@ struct HomeView: View {
 
     private var quickActions: some View {
         HStack(spacing: Theme.Spacing.md) {
-            QuickActionCard(
+            HomeQuickAction(
                 systemImage: "calendar",
                 title: "Book a tee time",
                 subtitle: "Find an open slot"
             ) { appState.selectedTab = .book }
-            QuickActionCard(
+            HomeQuickAction(
                 systemImage: "magnifyingglass",
                 title: "Browse courses",
                 subtitle: "500+ near you"
@@ -118,7 +123,7 @@ struct HomeView: View {
                         NavigationLink(value: course) {
                             RecommendedCourseCard(course: course)
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(PressScaleStyle())
                     }
                 }
                 .padding(.horizontal, Theme.screenPadding)
@@ -150,13 +155,57 @@ struct HomeView: View {
     }
 }
 
+// MARK: - Home quick action
+
+/// Icon + title + subtitle card for the Home quick-action row. Mirrors the
+/// shared `QuickActionCard` visual but drives the tap through `PressScaleStyle`
+/// so both primary shortcuts get the springy press.
+private struct HomeQuickAction: View {
+    let systemImage: String
+    let title: String
+    let subtitle: String
+    var action: () -> Void
+
+    var body: some View {
+        Button {
+            Haptics.tap()
+            action()
+        } label: {
+            VStack(alignment: .leading, spacing: Theme.Spacing.md) {
+                Image(systemName: systemImage)
+                    .font(.system(size: 20, weight: .semibold))
+                    .foregroundStyle(Theme.Palette.primary)
+                    .frame(width: 44, height: 44)
+                    .background(
+                        Theme.Palette.surfaceMuted,
+                        in: RoundedRectangle(cornerRadius: Theme.Radius.sm, style: .continuous)
+                    )
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(title)
+                        .font(Theme.Typography.headline)
+                        .foregroundStyle(Theme.Palette.ink)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
+                    Text(subtitle)
+                        .font(Theme.Typography.footnote)
+                        .foregroundStyle(Theme.Palette.inkSecondary)
+                        .lineLimit(1)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .gsCard()
+        }
+        .buttonStyle(PressScaleStyle())
+    }
+}
+
 // MARK: - Next round hero card
 
 private struct NextRoundHero: View {
     let booking: Booking
 
     var body: some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.lg) {
+        VStack(alignment: .leading, spacing: Theme.Spacing.xl) {
             VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
                 EyebrowText("Your next round", onDark: true)
                 Text(booking.course.name)
@@ -169,15 +218,15 @@ private struct NextRoundHero: View {
                     .foregroundStyle(Theme.Palette.onDarkSecondary)
             }
 
-            HStack(alignment: .top, spacing: Theme.Spacing.md) {
-                StatColumn(label: "Date", value: dateValue, onDark: true)
-                Spacer(minLength: Theme.Spacing.sm)
-                StatColumn(label: "Tee time", value: booking.teeTime.timeDisplay, onDark: true)
-                Spacer(minLength: Theme.Spacing.sm)
-                StatColumn(label: "Players", value: "\(booking.players)", onDark: true)
+            HStack(alignment: .firstTextBaseline, spacing: Theme.Spacing.md) {
+                HeroStat(label: "Date", value: dateValue, unit: monthValue)
+                Spacer(minLength: Theme.Spacing.xs)
+                HeroStat(label: "Tee time", value: teeValue, unit: teePeriod)
+                Spacer(minLength: Theme.Spacing.xs)
+                HeroStat(label: "Players", value: "\(booking.players)", unit: playersUnit)
             }
         }
-        .padding(Theme.Spacing.lg)
+        .padding(Theme.Spacing.xl)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(Theme.Palette.primary)
         .overlay(alignment: .topTrailing) {
@@ -185,13 +234,75 @@ private struct NextRoundHero: View {
                 .allowsHitTesting(false)
         }
         .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.xl, style: .continuous))
-        .shadow(color: Theme.Palette.primary.opacity(0.28), radius: 18, x: 0, y: 10)
+        .shadow(color: Theme.Palette.primary.opacity(0.28), radius: 22, x: 0, y: 12)
     }
+
+    // MARK: Derived stat parts
 
     private var dateValue: String {
         let formatter = DateFormatter()
-        formatter.dateFormat = "MMM d"
+        formatter.dateFormat = "d"
         return formatter.string(from: booking.date)
+    }
+
+    private var monthValue: String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "MMM"
+        return formatter.string(from: booking.date).uppercased()
+    }
+
+    /// The clock portion of "9:00 AM".
+    private var teeValue: String {
+        booking.teeTime.timeDisplay
+            .split(separator: " ")
+            .first
+            .map(String.init) ?? booking.teeTime.timeDisplay
+    }
+
+    /// The meridiem portion of "9:00 AM".
+    private var teePeriod: String {
+        booking.teeTime.timeDisplay
+            .split(separator: " ")
+            .dropFirst()
+            .first
+            .map(String.init) ?? ""
+    }
+
+    private var playersUnit: String {
+        booking.players == 1 ? "player" : "players"
+    }
+}
+
+/// A hero stat: small onDark eyebrow, a large display number, and a tiny muted
+/// unit riding its baseline. Numbers animate with `.numericText()`.
+private struct HeroStat: View {
+    let label: String
+    let value: String
+    let unit: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
+            Text(label.uppercased())
+                .font(Theme.Typography.caption)
+                .tracking(0.6)
+                .lineLimit(1)
+                .minimumScaleFactor(0.75)
+                .foregroundStyle(Theme.Palette.onDarkSecondary)
+            HStack(alignment: .firstTextBaseline, spacing: 3) {
+                Text(value)
+                    .font(Theme.Typography.display(30, .bold))
+                    .foregroundStyle(Theme.Palette.onDark)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.6)
+                    .contentTransition(.numericText())
+                if !unit.isEmpty {
+                    Text(unit)
+                        .font(Theme.Typography.caption)
+                        .foregroundStyle(Theme.Palette.onDarkSecondary)
+                        .lineLimit(1)
+                }
+            }
+        }
     }
 }
 

@@ -16,12 +16,15 @@ struct ProfileView: View {
             ScrollView {
                 if let profile {
                     content(for: profile)
+                        .transition(.opacity)
                 } else {
                     loading
                 }
             }
             .background(Theme.Palette.background)
             .navigationTitle("Profile")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar(.hidden, for: .navigationBar)
             .navigationDestination(for: Course.self) { course in
                 CourseDetailView(course: course)
             }
@@ -32,6 +35,7 @@ struct ProfileView: View {
                 }
                 Button("Cancel", role: .cancel) {}
             }
+            .animation(.spring(response: 0.45, dampingFraction: 0.85), value: profile == nil)
         }
         .task {
             profile = await appState.service.currentUser()
@@ -52,12 +56,12 @@ struct ProfileView: View {
     // MARK: - Content
 
     private func content(for profile: UserProfile) -> some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.xl) {
+        VStack(alignment: .leading, spacing: Theme.Spacing.xxl) {
             ProfileHeader(profile: profile)
 
             LoyaltyHeroCard(profile: profile)
 
-            QuickStatsCard(profile: profile, roundsCount: rounds.count)
+            StatsRow(profile: profile, roundsCount: rounds.count)
 
             if !activity.isEmpty {
                 VStack(alignment: .leading, spacing: Theme.Spacing.md) {
@@ -69,7 +73,7 @@ struct ProfileView: View {
             if !rounds.isEmpty {
                 VStack(alignment: .leading, spacing: Theme.Spacing.md) {
                     SectionHeader(title: "My rounds")
-                    RoundsCard(rounds: rounds)
+                    RoundsCard(rounds: rounds, nextRoundID: nextRoundID)
                 }
             }
 
@@ -95,11 +99,21 @@ struct ProfileView: View {
                         .stroke(Theme.Palette.hairline, lineWidth: 1)
                 )
             }
-            .buttonStyle(.plain)
+            .buttonStyle(PressScaleStyle())
         }
         .padding(.horizontal, Theme.screenPadding)
-        .padding(.top, Theme.Spacing.xs)
+        .padding(.top, Theme.Spacing.md)
         .padding(.bottom, Theme.Spacing.xxxl)
+    }
+
+    /// The id of the nearest upcoming (or most recent) round, used to give one
+    /// row a subtle brand accent.
+    private var nextRoundID: Booking.ID? {
+        let now = Date()
+        let upcoming = rounds
+            .filter { $0.date >= now }
+            .min(by: { $0.date < $1.date })
+        return (upcoming ?? rounds.min(by: { $0.date < $1.date }))?.id
     }
 }
 
@@ -109,22 +123,32 @@ private struct ProfileHeader: View {
     let profile: UserProfile
 
     var body: some View {
-        HStack(spacing: Theme.Spacing.md) {
-            AvatarView(name: profile.fullName, imageName: profile.avatarImageName, size: 72)
+        VStack(alignment: .leading, spacing: Theme.Spacing.md) {
+            HStack(alignment: .center, spacing: Theme.Spacing.md) {
+                AvatarView(name: profile.fullName, imageName: profile.avatarImageName, size: 68)
 
-            VStack(alignment: .leading, spacing: 3) {
-                Text(profile.fullName)
-                    .font(Theme.Typography.title)
-                    .foregroundStyle(Theme.Palette.ink)
-                Text(profile.email)
-                    .font(Theme.Typography.footnote)
-                    .foregroundStyle(Theme.Palette.inkSecondary)
-                Text("Member since \(memberYear)")
-                    .font(Theme.Typography.footnote)
-                    .foregroundStyle(Theme.Palette.inkTertiary)
+                VStack(alignment: .leading, spacing: 4) {
+                    EyebrowText("Your profile")
+                    Text(profile.email)
+                        .font(Theme.Typography.footnote)
+                        .foregroundStyle(Theme.Palette.inkSecondary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
+                }
+
+                Spacer(minLength: 0)
             }
 
-            Spacer(minLength: 0)
+            Text(profile.fullName)
+                .font(Theme.Typography.display(40, .bold))
+                .foregroundStyle(Theme.Palette.ink)
+                .lineLimit(2)
+                .minimumScaleFactor(0.7)
+                .fixedSize(horizontal: false, vertical: true)
+
+            Text("Member since \(memberYear)")
+                .font(Theme.Typography.footnote)
+                .foregroundStyle(Theme.Palette.inkTertiary)
         }
     }
 
@@ -140,35 +164,66 @@ private struct LoyaltyHeroCard: View {
     let profile: UserProfile
 
     var body: some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
+        VStack(spacing: Theme.Spacing.lg) {
             HStack(alignment: .firstTextBaseline) {
                 EyebrowText("Loyalty", onDark: true)
                 Spacer(minLength: Theme.Spacing.sm)
                 Text("Level \(profile.loyaltyLevel)")
                     .font(Theme.Typography.caption)
-                    .foregroundStyle(Theme.Palette.onDarkSecondary)
-            }
-
-            VStack(alignment: .leading, spacing: 2) {
-                Text(profile.loyaltyTier)
-                    .font(Theme.Typography.titleHero)
+                    .tracking(0.5)
                     .foregroundStyle(Theme.Palette.onDark)
-                Text("\(profile.points) pts")
-                    .font(Theme.Typography.title2)
-                    .foregroundStyle(Theme.Palette.lime)
+                    .padding(.horizontal, Theme.Spacing.sm)
+                    .padding(.vertical, 5)
+                    .background(Color.white.opacity(0.14), in: Capsule())
                     .contentTransition(.numericText())
             }
-            .padding(.top, Theme.Spacing.xxs)
 
-            LoyaltyProgressBar(progress: profile.tierProgress)
-                .padding(.top, Theme.Spacing.xs)
+            ProgressRing(
+                progress: profile.tierProgress,
+                lineWidth: 14,
+                trackColor: Color.white.opacity(0.16)
+            ) {
+                VStack(spacing: 2) {
+                    Text("\(profile.points)")
+                        .font(Theme.Typography.display(38, .bold))
+                        .foregroundStyle(Theme.Palette.onDark)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.5)
+                        .contentTransition(.numericText())
+                    Text("PTS")
+                        .font(Theme.Typography.caption)
+                        .tracking(1.5)
+                        .foregroundStyle(Theme.Palette.onDarkSecondary)
+                    Text(profile.loyaltyTier)
+                        .font(Theme.Typography.callout)
+                        .foregroundStyle(Theme.Palette.lime)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
+                        .padding(.top, Theme.Spacing.xxs)
+                }
+                .padding(.horizontal, Theme.Spacing.xs)
+            }
+            .frame(width: 176, height: 176)
 
-            Text("\(profile.pointsToNextTier) pts to next tier")
-                .font(Theme.Typography.footnote)
-                .foregroundStyle(Theme.Palette.onDarkSecondary)
+            VStack(spacing: Theme.Spacing.xxs) {
+                Text("Level \(profile.loyaltyLevel) · \(profile.loyaltyTier)")
+                    .font(Theme.Typography.headline)
+                    .foregroundStyle(Theme.Palette.onDark)
+                    .contentTransition(.numericText())
+                HStack(spacing: 5) {
+                    Text("\(profile.pointsToNextTier)")
+                        .font(Theme.Typography.callout)
+                        .foregroundStyle(Theme.Palette.lime)
+                        .contentTransition(.numericText())
+                    Text("pts to next tier")
+                        .font(Theme.Typography.footnote)
+                        .foregroundStyle(Theme.Palette.onDarkSecondary)
+                }
+            }
+            .multilineTextAlignment(.center)
         }
-        .padding(Theme.Spacing.lg)
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(Theme.Spacing.xl)
+        .frame(maxWidth: .infinity)
         .background(
             ZStack {
                 Theme.Palette.primary
@@ -180,40 +235,18 @@ private struct LoyaltyHeroCard: View {
     }
 }
 
-private struct LoyaltyProgressBar: View {
-    let progress: Double
+// MARK: - Stats row
 
-    var body: some View {
-        GeometryReader { geo in
-            let clamped = min(max(progress, 0), 1)
-            ZStack(alignment: .leading) {
-                Capsule()
-                    .fill(Color.white.opacity(0.22))
-                Capsule()
-                    .fill(Theme.Palette.lime)
-                    .frame(width: max(10, geo.size.width * clamped))
-            }
-        }
-        .frame(height: 10)
-    }
-}
-
-// MARK: - Quick stats
-
-private struct QuickStatsCard: View {
+private struct StatsRow: View {
     let profile: UserProfile
     let roundsCount: Int
 
     var body: some View {
-        HStack(alignment: .top) {
-            StatColumn(label: "Handicap", value: handicapValue)
-            Spacer(minLength: Theme.Spacing.sm)
-            StatColumn(label: "Rounds", value: "\(roundsCount)", alignment: .center)
-            Spacer(minLength: Theme.Spacing.sm)
-            StatColumn(label: "Points", value: "\(profile.points)", alignment: .trailing)
+        HStack(spacing: Theme.Spacing.sm) {
+            HeroMetric(value: "\(roundsCount)", unit: nil, label: "Rounds")
+            HeroMetric(value: handicapValue, unit: nil, label: "Handicap")
+            HeroMetric(value: "\(profile.points)", unit: "pts", label: "Points")
         }
-        .frame(maxWidth: .infinity)
-        .gsCard()
     }
 
     private var handicapValue: String {
@@ -221,6 +254,41 @@ private struct QuickStatsCard: View {
             return String(format: "%.1f", handicap)
         }
         return "—"
+    }
+}
+
+/// A single editorial metric block: a large display number with an optional tiny
+/// unit, over an uppercase label. Guards hard against wrapping.
+private struct HeroMetric: View {
+    let value: String
+    let unit: String?
+    let label: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(alignment: .firstTextBaseline, spacing: 3) {
+                Text(value)
+                    .font(Theme.Typography.display(30, .bold))
+                    .foregroundStyle(Theme.Palette.ink)
+                    .contentTransition(.numericText())
+                if let unit {
+                    Text(unit)
+                        .font(Theme.Typography.caption)
+                        .foregroundStyle(Theme.Palette.inkTertiary)
+                }
+            }
+            .lineLimit(1)
+            .minimumScaleFactor(0.55)
+
+            Text(label.uppercased())
+                .font(Theme.Typography.caption)
+                .tracking(0.6)
+                .foregroundStyle(Theme.Palette.inkSecondary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.75)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .gsCard(padding: Theme.Spacing.md)
     }
 }
 
@@ -236,7 +304,7 @@ private struct ActivityCard: View {
                 if index < activity.count - 1 {
                     Divider()
                         .overlay(Theme.Palette.hairline)
-                        .padding(.leading, 40 + Theme.Spacing.sm)
+                        .padding(.leading, 44 + Theme.Spacing.sm)
                 }
             }
         }
@@ -250,9 +318,9 @@ private struct ActivityRow: View {
     var body: some View {
         HStack(spacing: Theme.Spacing.sm) {
             Image(systemName: item.systemImage)
-                .font(.system(size: 15, weight: .semibold))
+                .font(.system(size: 16, weight: .semibold))
                 .foregroundStyle(Theme.Palette.primary)
-                .frame(width: 40, height: 40)
+                .frame(width: 44, height: 44)
                 .background(Theme.Palette.surfaceMuted, in: Circle())
 
             VStack(alignment: .leading, spacing: 2) {
@@ -267,8 +335,11 @@ private struct ActivityRow: View {
             Spacer(minLength: Theme.Spacing.sm)
 
             Text(item.pointsDisplay)
-                .font(Theme.Typography.callout)
+                .font(Theme.Typography.title2)
                 .foregroundStyle(item.points >= 0 ? Theme.Palette.accent : Theme.Palette.inkSecondary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+                .contentTransition(.numericText())
         }
         .padding(.vertical, Theme.Spacing.sm)
     }
@@ -278,38 +349,50 @@ private struct ActivityRow: View {
 
 private struct RoundsCard: View {
     let rounds: [Booking]
+    let nextRoundID: Booking.ID?
 
     var body: some View {
         VStack(spacing: 0) {
             ForEach(Array(rounds.enumerated()), id: \.element.id) { index, booking in
                 NavigationLink(value: booking.course) {
-                    RoundRow(booking: booking)
+                    RoundRow(booking: booking, isNext: booking.id == nextRoundID)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(PressScaleStyle())
+                .simultaneousGesture(TapGesture().onEnded { Haptics.selection() })
+
                 if index < rounds.count - 1 {
                     Divider()
                         .overlay(Theme.Palette.hairline)
-                        .padding(.leading, 48 + Theme.Spacing.sm)
+                        .padding(.leading, 52 + Theme.Spacing.sm)
                 }
             }
         }
-        .gsCard()
+        .gsCard(padding: Theme.Spacing.xs)
     }
 }
 
 private struct RoundRow: View {
     let booking: Booking
+    let isNext: Bool
 
     var body: some View {
         HStack(spacing: Theme.Spacing.sm) {
             CourseImage(course: booking.course)
-                .frame(width: 48, height: 48)
+                .frame(width: 52, height: 52)
                 .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.sm, style: .continuous))
 
-            VStack(alignment: .leading, spacing: 2) {
+            VStack(alignment: .leading, spacing: 3) {
+                if isNext {
+                    Text("UP NEXT")
+                        .font(Theme.Typography.caption)
+                        .tracking(0.8)
+                        .foregroundStyle(Theme.Palette.accent)
+                }
                 Text(booking.course.name)
                     .font(Theme.Typography.headline)
                     .foregroundStyle(Theme.Palette.ink)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
                 Text("\(booking.dateDisplay) · \(booking.teeTime.timeDisplay)")
                     .font(Theme.Typography.footnote)
                     .foregroundStyle(Theme.Palette.inkSecondary)
@@ -318,9 +401,15 @@ private struct RoundRow: View {
             Spacer(minLength: Theme.Spacing.sm)
 
             VStack(alignment: .trailing, spacing: 2) {
-                Text("\(booking.players)p")
-                    .font(Theme.Typography.callout)
-                    .foregroundStyle(Theme.Palette.ink)
+                HStack(alignment: .firstTextBaseline, spacing: 2) {
+                    Text("\(booking.players)")
+                        .font(Theme.Typography.title2)
+                        .foregroundStyle(Theme.Palette.ink)
+                        .contentTransition(.numericText())
+                    Text(booking.players == 1 ? "player" : "players")
+                        .font(Theme.Typography.caption)
+                        .foregroundStyle(Theme.Palette.inkTertiary)
+                }
                 Text(booking.confirmationCode)
                     .font(Theme.Typography.caption)
                     .foregroundStyle(Theme.Palette.inkTertiary)
@@ -329,8 +418,22 @@ private struct RoundRow: View {
             Image(systemName: "chevron.right")
                 .font(.system(size: 12, weight: .semibold))
                 .foregroundStyle(Theme.Palette.inkTertiary)
+                .padding(.leading, 2)
         }
         .padding(.vertical, Theme.Spacing.sm)
+        .padding(.horizontal, Theme.Spacing.xs)
+        .background {
+            if isNext {
+                RoundedRectangle(cornerRadius: Theme.Radius.md, style: .continuous)
+                    .fill(Theme.Palette.primary.opacity(0.05))
+                    .overlay(alignment: .leading) {
+                        Capsule()
+                            .fill(Theme.brandGradient)
+                            .frame(width: 3)
+                            .padding(.vertical, Theme.Spacing.sm)
+                    }
+            }
+        }
     }
 }
 

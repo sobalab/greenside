@@ -39,7 +39,7 @@ struct ReviewAndPayView: View {
     @ViewBuilder
     private func content(booking: BookingViewModel, draft: Booking) -> some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: Theme.Spacing.xl) {
+            VStack(alignment: .leading, spacing: Theme.Spacing.xxl) {
                 header
 
                 SummaryCard(draft: draft)
@@ -51,17 +51,21 @@ struct ReviewAndPayView: View {
                 paymentMethod
             }
             .padding(.horizontal, Theme.screenPadding)
-            .padding(.top, Theme.Spacing.xs)
-            .padding(.bottom, Theme.Spacing.xl)
+            .padding(.top, Theme.Spacing.sm)
+            .padding(.bottom, Theme.Spacing.xxl)
+            .animation(.spring(response: 0.4, dampingFraction: 0.85), value: draft.total)
         }
     }
 
     private var header: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
             EyebrowText("Step 3 of 3")
-            Text("Review & pay")
-                .font(Theme.Typography.largeTitle)
+            Text("Review\n& pay")
+                .font(Theme.Typography.display(40, .bold))
                 .foregroundStyle(Theme.Palette.ink)
+                .lineLimit(2)
+                .minimumScaleFactor(0.8)
+                .fixedSize(horizontal: false, vertical: true)
         }
     }
 
@@ -69,16 +73,24 @@ struct ReviewAndPayView: View {
 
     private func addOnsSection(booking: BookingViewModel) -> some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.md) {
-            Text("Enhance your round")
-                .font(Theme.Typography.title)
-                .foregroundStyle(Theme.Palette.ink)
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Enhance your round")
+                    .font(Theme.Typography.title)
+                    .foregroundStyle(Theme.Palette.ink)
+                Text("Optional extras, added to your total")
+                    .font(Theme.Typography.footnote)
+                    .foregroundStyle(Theme.Palette.inkSecondary)
+            }
 
             VStack(spacing: Theme.Spacing.sm) {
                 ForEach(booking.addOns) { addOn in
                     AddOnRow(
                         addOn: addOn,
                         isSelected: booking.isSelected(addOn),
-                        action: { booking.toggleAddOn(addOn) }
+                        action: {
+                            Haptics.selection()
+                            booking.toggleAddOn(addOn)
+                        }
                     )
                 }
             }
@@ -88,30 +100,43 @@ struct ReviewAndPayView: View {
     // MARK: - Price breakdown
 
     private func priceBreakdown(draft: Booking) -> some View {
-        VStack(spacing: Theme.Spacing.sm) {
-            PriceRow(
-                label: "Green fees (\(draft.players) × $\(draft.teeTime.price))",
-                value: "$\(draft.greenFeesTotal)"
-            )
-            if draft.addOnsTotal > 0 {
-                PriceRow(label: "Add-ons", value: "$\(draft.addOnsTotal)")
+        VStack(spacing: Theme.Spacing.md) {
+            VStack(spacing: Theme.Spacing.sm) {
+                PriceRow(
+                    label: "Green fees (\(draft.players) × $\(draft.teeTime.price))",
+                    value: draft.greenFeesTotal
+                )
+                if draft.addOnsTotal > 0 {
+                    PriceRow(label: "Add-ons", value: draft.addOnsTotal)
+                }
+                PriceRow(label: "Service fee", value: draft.serviceFee)
+                PriceRow(label: "Taxes", value: draft.taxes)
             }
-            PriceRow(label: "Service fee", value: "$\(draft.serviceFee)")
-            PriceRow(label: "Taxes", value: "$\(draft.taxes)")
 
             Divider()
                 .overlay(Theme.Palette.hairline)
-                .padding(.vertical, Theme.Spacing.xxs)
 
+            // Hero total — scale contrast carries the hierarchy.
             HStack(alignment: .firstTextBaseline) {
-                Text("Total")
-                    .font(Theme.Typography.headline)
-                    .foregroundStyle(Theme.Palette.ink)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Total")
+                        .font(Theme.Typography.callout)
+                        .foregroundStyle(Theme.Palette.inkSecondary)
+                    Text("incl. taxes & fees")
+                        .font(Theme.Typography.footnote)
+                        .foregroundStyle(Theme.Palette.inkTertiary)
+                }
                 Spacer(minLength: Theme.Spacing.sm)
-                Text("$\(draft.total)")
-                    .font(Theme.Typography.title2)
-                    .foregroundStyle(Theme.Palette.primary)
-                    .contentTransition(.numericText())
+                HStack(alignment: .firstTextBaseline, spacing: 2) {
+                    Text("$")
+                        .font(Theme.Typography.title2)
+                        .foregroundStyle(Theme.Palette.primary)
+                    Text("\(draft.total)")
+                        .font(Theme.Typography.display(38, .bold))
+                        .foregroundStyle(Theme.Palette.primary)
+                        .contentTransition(.numericText())
+                        .monospacedDigit()
+                }
             }
         }
         .gsCard()
@@ -120,62 +145,87 @@ struct ReviewAndPayView: View {
     // MARK: - Payment method
 
     private var paymentMethod: some View {
-        Button {
-            Haptics.tap()
-            showPaymentSheet = true
-        } label: {
-            HStack(spacing: Theme.Spacing.md) {
-                Image(systemName: selectedCard.systemImage)
-                    .font(.system(size: 18, weight: .semibold))
-                    .foregroundStyle(Theme.Palette.primary)
-                    .frame(width: 44, height: 44)
-                    .background(
-                        Theme.Palette.surfaceMuted,
-                        in: RoundedRectangle(cornerRadius: Theme.Radius.sm, style: .continuous)
-                    )
+        VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
+            Text("Payment")
+                .font(Theme.Typography.title)
+                .foregroundStyle(Theme.Palette.ink)
 
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(selectedCard.displayName)
-                        .font(Theme.Typography.headline)
-                        .foregroundStyle(Theme.Palette.ink)
-                    Text("Default payment method")
-                        .font(Theme.Typography.footnote)
-                        .foregroundStyle(Theme.Palette.inkSecondary)
+            Button {
+                Haptics.tap()
+                showPaymentSheet = true
+            } label: {
+                HStack(spacing: Theme.Spacing.md) {
+                    Image(systemName: selectedCard.systemImage)
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundStyle(Theme.Palette.primary)
+                        .frame(width: 44, height: 44)
+                        .background(
+                            Theme.Palette.surfaceMuted,
+                            in: RoundedRectangle(cornerRadius: Theme.Radius.sm, style: .continuous)
+                        )
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(selectedCard.displayName)
+                            .font(Theme.Typography.headline)
+                            .foregroundStyle(Theme.Palette.ink)
+                        Text("Default payment method")
+                            .font(Theme.Typography.footnote)
+                            .foregroundStyle(Theme.Palette.inkSecondary)
+                    }
+
+                    Spacer(minLength: Theme.Spacing.sm)
+
+                    Text("Change")
+                        .font(Theme.Typography.callout)
+                        .foregroundStyle(Theme.Palette.accent)
                 }
-
-                Spacer(minLength: Theme.Spacing.sm)
-
-                Text("Change")
-                    .font(Theme.Typography.callout)
-                    .foregroundStyle(Theme.Palette.accent)
+                .gsCard()
             }
-            .gsCard()
+            .buttonStyle(PressScaleStyle())
         }
-        .buttonStyle(.plain)
     }
 
     // MARK: - Pay bar
 
     private func payBar(booking: BookingViewModel, draft: Booking) -> some View {
-        Button {
-            Task {
-                Haptics.impact()
-                await booking.confirmAndPay()
-                Haptics.success()
+        VStack(spacing: Theme.Spacing.sm) {
+            HStack(alignment: .firstTextBaseline) {
+                Text("Total due")
+                    .font(Theme.Typography.callout)
+                    .foregroundStyle(Theme.Palette.inkSecondary)
+                Spacer(minLength: Theme.Spacing.sm)
+                HStack(alignment: .firstTextBaseline, spacing: 1) {
+                    Text("$")
+                        .font(Theme.Typography.headline)
+                        .foregroundStyle(Theme.Palette.ink)
+                    Text("\(draft.total)")
+                        .font(Theme.Typography.display(24, .bold))
+                        .foregroundStyle(Theme.Palette.ink)
+                        .contentTransition(.numericText())
+                        .monospacedDigit()
+                }
             }
-        } label: {
-            if booking.isProcessingPayment {
-                ProgressView()
-                    .tint(Theme.Palette.onDark)
-            } else {
-                Text("Pay $\(draft.total)")
-                    .contentTransition(.numericText())
+
+            Button {
+                Task {
+                    Haptics.impact()
+                    await booking.confirmAndPay()
+                    Haptics.success()
+                }
+            } label: {
+                if booking.isProcessingPayment {
+                    ProgressView()
+                        .tint(Theme.Palette.onDark)
+                } else {
+                    Text("Pay $\(draft.total)")
+                        .contentTransition(.numericText())
+                }
             }
+            .buttonStyle(GSGradientButtonStyle())
+            .disabled(booking.isProcessingPayment)
         }
-        .buttonStyle(GSGradientButtonStyle())
-        .disabled(booking.isProcessingPayment)
         .padding(.horizontal, Theme.screenPadding)
-        .padding(.top, Theme.Spacing.sm)
+        .padding(.top, Theme.Spacing.md)
         .padding(.bottom, Theme.Spacing.xs)
         .background(Theme.Palette.surface.ignoresSafeArea(edges: .bottom))
         .overlay(alignment: .top) {
@@ -183,6 +233,8 @@ struct ReviewAndPayView: View {
                 .fill(Theme.Palette.hairline)
                 .frame(height: 1)
         }
+        .animation(.spring(response: 0.4, dampingFraction: 0.85), value: draft.total)
+        .animation(.spring(response: 0.4, dampingFraction: 0.85), value: booking.isProcessingPayment)
     }
 }
 
@@ -192,27 +244,70 @@ private struct SummaryCard: View {
     let draft: Booking
 
     var body: some View {
-        HStack(spacing: Theme.Spacing.md) {
-            CourseImage(course: draft.course)
-                .frame(width: 56, height: 56)
-                .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.sm, style: .continuous))
+        VStack(alignment: .leading, spacing: Theme.Spacing.md) {
+            HStack(spacing: Theme.Spacing.md) {
+                CourseImage(course: draft.course)
+                    .frame(width: 64, height: 64)
+                    .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.sm, style: .continuous))
 
-            VStack(alignment: .leading, spacing: 4) {
-                Text(draft.course.name)
-                    .font(Theme.Typography.headline)
-                    .foregroundStyle(Theme.Palette.ink)
-                    .lineLimit(1)
-                Text("\(draft.dateDisplay) · \(draft.teeTime.timeDisplay)")
-                    .font(Theme.Typography.callout)
-                    .foregroundStyle(Theme.Palette.inkSecondary)
-                Text("\(draft.players) player\(draft.players == 1 ? "" : "s")")
-                    .font(Theme.Typography.footnote)
-                    .foregroundStyle(Theme.Palette.inkSecondary)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(draft.course.name)
+                        .font(Theme.Typography.title2)
+                        .foregroundStyle(Theme.Palette.ink)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
+                    Text(draft.course.location)
+                        .font(Theme.Typography.footnote)
+                        .foregroundStyle(Theme.Palette.inkSecondary)
+                        .lineLimit(1)
+                }
+
+                Spacer(minLength: 0)
             }
 
-            Spacer(minLength: 0)
+            Divider()
+                .overlay(Theme.Palette.hairline)
+
+            HStack(spacing: 0) {
+                SummaryStat(label: "Date", value: draft.dateDisplay)
+                statDivider
+                SummaryStat(label: "Tee time", value: draft.teeTime.timeDisplay)
+                statDivider
+                SummaryStat(
+                    label: "Players",
+                    value: "\(draft.players)",
+                    numeric: true
+                )
+            }
         }
         .gsCard()
+    }
+
+    private var statDivider: some View {
+        Rectangle()
+            .fill(Theme.Palette.hairline)
+            .frame(width: 1, height: 30)
+    }
+}
+
+private struct SummaryStat: View {
+    let label: String
+    let value: String
+    var numeric: Bool = false
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 3) {
+            Text(label.uppercased())
+                .font(Theme.Typography.caption)
+                .foregroundStyle(Theme.Palette.inkTertiary)
+            Text(value)
+                .font(numeric ? Theme.Typography.title2 : Theme.Typography.headline)
+                .foregroundStyle(Theme.Palette.ink)
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+                .contentTransition(numeric ? .numericText() : .identity)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
 
@@ -246,9 +341,16 @@ private struct AddOnRow: View {
 
                 Spacer(minLength: Theme.Spacing.xs)
 
-                Text("$\(addOn.price)")
-                    .font(Theme.Typography.callout)
-                    .foregroundStyle(Theme.Palette.ink)
+                HStack(alignment: .firstTextBaseline, spacing: 1) {
+                    Text("$")
+                        .font(Theme.Typography.footnote)
+                        .foregroundStyle(Theme.Palette.inkSecondary)
+                    Text("\(addOn.price)")
+                        .font(Theme.Typography.title2)
+                        .foregroundStyle(Theme.Palette.ink)
+                        .contentTransition(.numericText())
+                        .monospacedDigit()
+                }
 
                 Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
                     .font(.system(size: 22))
@@ -267,8 +369,8 @@ private struct AddOnRow: View {
                     )
             )
         }
-        .buttonStyle(.plain)
-        .animation(.easeOut(duration: 0.15), value: isSelected)
+        .buttonStyle(PressScaleStyle())
+        .animation(.spring(response: 0.4, dampingFraction: 0.85), value: isSelected)
     }
 }
 
@@ -276,7 +378,7 @@ private struct AddOnRow: View {
 
 private struct PriceRow: View {
     let label: String
-    let value: String
+    let value: Int
 
     var body: some View {
         HStack {
@@ -284,9 +386,11 @@ private struct PriceRow: View {
                 .font(Theme.Typography.callout)
                 .foregroundStyle(Theme.Palette.inkSecondary)
             Spacer(minLength: Theme.Spacing.sm)
-            Text(value)
-                .font(Theme.Typography.callout)
+            Text("$\(value)")
+                .font(Theme.Typography.bodyMedium)
                 .foregroundStyle(Theme.Palette.ink)
+                .contentTransition(.numericText())
+                .monospacedDigit()
         }
     }
 }
@@ -343,7 +447,8 @@ private struct PaymentPickerSheet: View {
                             }
                             .gsCard()
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(PressScaleStyle())
+                        .animation(.spring(response: 0.4, dampingFraction: 0.85), value: selected)
                     }
                 }
                 .padding(Theme.screenPadding)

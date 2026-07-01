@@ -24,18 +24,12 @@ struct BrowseView: View {
         return "\(query.lowercased())|\(filterKey)"
     }
 
-    private var resultCountLabel: String {
-        if isLoading && results.isEmpty {
-            return "Finding the best rounds near you"
-        }
-        let count = results.count
-        return count == 1 ? "1 course available" : "\(count) courses available"
-    }
+    private var isSearching: Bool { isLoading && results.isEmpty }
 
     var body: some View {
         NavigationStack {
             ScrollView {
-                LazyVStack(alignment: .leading, spacing: Theme.Spacing.lg, pinnedViews: []) {
+                LazyVStack(alignment: .leading, spacing: Theme.Spacing.xl, pinnedViews: []) {
                     header
 
                     BrowseSearchField(query: $query)
@@ -64,21 +58,50 @@ struct BrowseView: View {
 
     // MARK: - Header
 
+    /// Editorial masthead: eyebrow, a big tight display title, and a live count
+    /// where the number is the hero (large, animated) beside a muted unit.
     private var header: some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.xxs) {
+        VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
             EyebrowText("Explore")
-            Text("Browse courses")
-                .font(Theme.Typography.largeTitle)
+
+            Text("Browse\ncourses")
+                .font(Theme.Typography.display(38, .bold))
                 .foregroundStyle(Theme.Palette.ink)
-            Text(resultCountLabel)
-                .font(Theme.Typography.footnote)
-                .foregroundStyle(Theme.Palette.inkSecondary)
-                .contentTransition(.numericText())
-                .animation(.snappy, value: results.count)
+                .lineSpacing(-2)
+                .lineLimit(2)
+                .minimumScaleFactor(0.8)
+                .fixedSize(horizontal: false, vertical: true)
+
+            countLine
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, Theme.screenPadding)
         .padding(.top, Theme.Spacing.sm)
+    }
+
+    @ViewBuilder
+    private var countLine: some View {
+        if isSearching {
+            HStack(spacing: Theme.Spacing.xs) {
+                ProgressView()
+                    .controlSize(.small)
+                    .tint(Theme.Palette.accent)
+                Text("Finding the best rounds near you")
+                    .font(Theme.Typography.callout)
+                    .foregroundStyle(Theme.Palette.inkSecondary)
+            }
+            .transition(.opacity)
+        } else {
+            HStack(alignment: .firstTextBaseline, spacing: Theme.Spacing.xs) {
+                Text("\(results.count)")
+                    .font(Theme.Typography.display(30, .bold))
+                    .foregroundStyle(Theme.Palette.primary)
+                    .contentTransition(.numericText())
+                Text(results.count == 1 ? "course available" : "courses available")
+                    .font(Theme.Typography.callout)
+                    .foregroundStyle(Theme.Palette.inkSecondary)
+            }
+        }
     }
 
     // MARK: - Filters
@@ -87,7 +110,7 @@ struct BrowseView: View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: Theme.Spacing.xs) {
                 ForEach(CourseFilter.allCases) { filter in
-                    GSChip(
+                    BrowseFilterChip(
                         title: filter.rawValue,
                         isSelected: selected.contains(filter)
                     ) {
@@ -98,6 +121,7 @@ struct BrowseView: View {
             .padding(.horizontal, Theme.screenPadding)
             .padding(.vertical, 2)
         }
+        .animation(.spring(response: 0.4, dampingFraction: 0.85), value: selected)
     }
 
     private func toggle(_ filter: CourseFilter) {
@@ -113,7 +137,7 @@ struct BrowseView: View {
 
     @ViewBuilder
     private var resultsSection: some View {
-        if isLoading && results.isEmpty {
+        if isSearching {
             BrowseLoadingState()
         } else if results.isEmpty {
             BrowseEmptyState(hasQuery: !query.isEmpty || !selected.isEmpty)
@@ -123,10 +147,35 @@ struct BrowseView: View {
                     NavigationLink(value: course) {
                         BrowseCourseCard(course: course)
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(PressScaleStyle())
                 }
             }
+            .animation(.spring(response: 0.4, dampingFraction: 0.85), value: results.count)
         }
+    }
+}
+
+// MARK: - Filter chip
+
+/// A selectable pill chip for Browse filters, with a confident press-scale and
+/// spring transition on selection. Mirrors `GSChip`'s green identity but adds
+/// motion per the elevated spec.
+private struct BrowseFilterChip: View {
+    let title: String
+    var isSelected: Bool
+    var action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Text(title)
+                .font(Theme.Typography.callout)
+                .foregroundStyle(isSelected ? Theme.Palette.onDark : Theme.Palette.ink)
+                .padding(.horizontal, Theme.Spacing.md)
+                .padding(.vertical, Theme.Spacing.xs + 2)
+                .background(isSelected ? Theme.Palette.primary : Theme.Palette.surface, in: Capsule())
+                .overlay(Capsule().stroke(Theme.Palette.hairline, lineWidth: isSelected ? 0 : 1))
+        }
+        .buttonStyle(PressScaleStyle())
     }
 }
 
@@ -152,6 +201,7 @@ private struct BrowseSearchField: View {
 
             if !query.isEmpty {
                 Button {
+                    Haptics.tap()
                     query = ""
                 } label: {
                     Image(systemName: "xmark.circle.fill")
@@ -178,21 +228,18 @@ private struct BrowseSearchField: View {
 
 // MARK: - Result card
 
-/// A full-width course card: hero image with a price tag and up to two course
-/// tags, then a name / location row with an inline rating.
+/// A full-width course card: hero image with course tags, then an editorial
+/// info row where the course name reads large and the green fee is the hero
+/// number (big display value + a tiny muted unit).
 private struct BrowseCourseCard: View {
     let course: Course
 
     var body: some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
+        VStack(alignment: .leading, spacing: Theme.Spacing.md) {
             CourseImage(course: course)
                 .frame(maxWidth: .infinity)
-                .frame(height: 170)
+                .frame(height: 180)
                 .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.md, style: .continuous))
-                .overlay(alignment: .topTrailing) {
-                    PriceTag(amount: course.greenFee)
-                        .padding(Theme.Spacing.sm)
-                }
                 .overlay(alignment: .bottomLeading) {
                     HStack(spacing: Theme.Spacing.xs) {
                         ForEach(course.tags.prefix(2)) { tag in
@@ -209,30 +256,48 @@ private struct BrowseCourseCard: View {
                     .padding(Theme.Spacing.sm)
                 }
 
-            HStack(alignment: .top, spacing: Theme.Spacing.sm) {
-                VStack(alignment: .leading, spacing: 2) {
+            HStack(alignment: .bottom, spacing: Theme.Spacing.md) {
+                VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
                     Text(course.name)
-                        .font(Theme.Typography.headline)
+                        .font(Theme.Typography.title2)
                         .foregroundStyle(Theme.Palette.ink)
                         .lineLimit(1)
+                        .minimumScaleFactor(0.85)
                     Text(course.location)
                         .font(Theme.Typography.footnote)
                         .foregroundStyle(Theme.Palette.inkSecondary)
                         .lineLimit(1)
+
+                    RatingLabel(
+                        rating: course.rating,
+                        trailing: "\(course.slotsAvailableToday) slots"
+                    )
+                    .padding(.top, Theme.Spacing.xxs)
                 }
 
                 Spacer(minLength: Theme.Spacing.xs)
 
-                RatingLabel(
-                    rating: course.rating,
-                    trailing: "\(course.slotsAvailableToday) slots"
-                )
-                .fixedSize()
+                greenFee
             }
             .padding(.horizontal, Theme.Spacing.xxs)
             .padding(.bottom, Theme.Spacing.xxs)
         }
         .gsCard(padding: Theme.Spacing.sm)
+    }
+
+    private var greenFee: some View {
+        VStack(alignment: .trailing, spacing: 0) {
+            Text("$\(course.greenFee)")
+                .font(Theme.Typography.display(28, .bold))
+                .foregroundStyle(Theme.Palette.primary)
+                .contentTransition(.numericText())
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+            Text("green fee")
+                .font(Theme.Typography.caption)
+                .foregroundStyle(Theme.Palette.inkTertiary)
+        }
+        .fixedSize()
     }
 }
 

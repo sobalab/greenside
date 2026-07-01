@@ -1,20 +1,22 @@
 import SwiftUI
 
-/// A pushed detail screen for a single course. Shows a full-bleed hero image,
-/// key stats, tags, an about section, facilities, and reviews, with a persistent
-/// "Book this course" CTA pinned to the bottom safe area.
+/// A pushed detail screen for a single course. Shows a full-bleed green hero,
+/// an oversized course name, a hero metric row, tags, an about section,
+/// facilities, and reviews, with a persistent gradient "Book a tee time" CTA
+/// pinned to the bottom safe area.
 struct CourseDetailView: View {
     let course: Course
 
     @Environment(AppState.self) private var appState
+    @Environment(\.dismiss) private var dismiss
     @State private var isSaved = false
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: Theme.Spacing.xl) {
+            VStack(alignment: .leading, spacing: 0) {
                 hero
-                VStack(alignment: .leading, spacing: Theme.Spacing.xl) {
-                    statsCard
+                VStack(alignment: .leading, spacing: Theme.Spacing.xxl) {
+                    metricRow
                     if !course.tags.isEmpty { tags }
                     about
                     if !course.facilities.isEmpty { facilities }
@@ -27,6 +29,7 @@ struct CourseDetailView: View {
         }
         .background(Theme.Palette.background)
         .scrollIndicators(.hidden)
+        .navigationBarBackButtonHidden(true)
         .navigationBarTitleDisplayMode(.inline)
         .toolbarBackground(.hidden, for: .navigationBar)
         .ignoresSafeArea(edges: .top)
@@ -39,28 +42,31 @@ struct CourseDetailView: View {
         ZStack(alignment: .bottomLeading) {
             CourseImage(course: course)
                 .frame(maxWidth: .infinity)
-                .frame(height: 300)
+                .frame(height: 380)
                 .clipped()
 
             LinearGradient(
-                colors: [Color.black.opacity(0.55), .clear],
+                colors: [Color.black.opacity(0.6), Color.black.opacity(0.05), .clear],
                 startPoint: .bottom,
                 endPoint: .top
             )
 
-            VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
-                Text(course.name)
-                    .font(Theme.Typography.titleHero)
-                    .foregroundStyle(Theme.Palette.onDark)
-                    .shadow(color: .black.opacity(0.25), radius: 8, y: 2)
-
+            VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
                 HStack(spacing: 6) {
                     Image(systemName: "mappin.and.ellipse")
-                        .font(.system(size: 13, weight: .semibold))
-                    Text(course.location)
-                        .font(Theme.Typography.body)
+                        .font(.system(size: 12, weight: .semibold))
+                    Text(course.location.uppercased())
+                        .font(Theme.Typography.caption)
+                        .tracking(0.8)
                 }
-                .foregroundStyle(Theme.Palette.onDark.opacity(0.9))
+                .foregroundStyle(Theme.Palette.onDark.opacity(0.85))
+
+                Text(course.name)
+                    .font(Theme.Typography.display(40, .bold))
+                    .foregroundStyle(Theme.Palette.onDark)
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.7)
+                    .shadow(color: .black.opacity(0.3), radius: 10, y: 3)
 
                 HStack(spacing: 5) {
                     Image(systemName: "star.fill")
@@ -73,50 +79,77 @@ struct CourseDetailView: View {
                         .font(Theme.Typography.callout)
                         .foregroundStyle(Theme.Palette.onDark.opacity(0.8))
                 }
-                .padding(.top, 2)
             }
             .padding(Theme.screenPadding)
+            .padding(.bottom, Theme.Spacing.xs)
         }
-        .frame(height: 300)
-        .overlay(alignment: .topTrailing) { saveButton }
+        .frame(height: 380)
+        .overlay(alignment: .top) { heroControls }
     }
 
-    private var saveButton: some View {
-        Button {
-            Haptics.tap()
-            isSaved.toggle()
-        } label: {
-            Image(systemName: isSaved ? "heart.fill" : "heart")
+    private var heroControls: some View {
+        HStack {
+            frostedButton(icon: "chevron.left") {
+                Haptics.tap()
+                dismiss()
+            }
+            Spacer(minLength: 0)
+            frostedButton(icon: isSaved ? "heart.fill" : "heart", tint: isSaved ? Theme.Palette.lime : .white) {
+                Haptics.tap()
+                isSaved.toggle()
+            }
+            .animation(.spring(response: 0.4, dampingFraction: 0.85), value: isSaved)
+        }
+        .padding(.horizontal, Theme.screenPadding)
+        .padding(.top, 54)
+    }
+
+    private func frostedButton(icon: String, tint: Color = .white, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: icon)
                 .font(.system(size: 16, weight: .semibold))
-                .foregroundStyle(isSaved ? Theme.Palette.lime : .white)
-                .frame(width: 40, height: 40)
+                .foregroundStyle(tint)
+                .frame(width: 42, height: 42)
                 .background(.ultraThinMaterial, in: Circle())
                 .overlay(Circle().stroke(.white.opacity(0.25), lineWidth: 1))
         }
-        .padding(.top, 54)
-        .padding(.trailing, Theme.screenPadding)
-        .animation(.easeOut(duration: 0.15), value: isSaved)
+        .buttonStyle(PressScaleStyle())
     }
 
-    // MARK: - Stats
+    // MARK: - Hero metrics
 
-    private var statsCard: some View {
+    private var metricRow: some View {
         HStack(alignment: .top, spacing: Theme.Spacing.sm) {
-            stat("Par", "\(course.par)")
+            metric(value: "\(course.par)", unit: "Par", accented: true)
             Spacer(minLength: 0)
-            stat("Holes", "\(course.holes)")
+            metric(value: "\(course.lengthYards)", unit: "Yards")
             Spacer(minLength: 0)
-            stat("Length", "\(course.lengthYards) yd")
+            metric(value: "\(course.holes)", unit: "Holes")
             Spacer(minLength: 0)
-            stat("Distance", String(format: "%.1f mi", course.distanceMiles))
+            metric(value: String(format: "%.1f", course.rating), unit: "Rating")
         }
         .frame(maxWidth: .infinity)
         .gsCard(padding: Theme.Spacing.lg)
     }
 
-    private func stat(_ label: String, _ value: String) -> some View {
-        StatColumn(label: label, value: value, alignment: .center)
-            .frame(maxWidth: .infinity)
+    private func metric(value: String, unit: String, accented: Bool = false) -> some View {
+        VStack(spacing: 6) {
+            Text(value)
+                .font(Theme.Typography.display(26, .bold))
+                .foregroundStyle(Theme.Palette.ink)
+                .lineLimit(1)
+                .minimumScaleFactor(0.5)
+                .contentTransition(.numericText())
+            Capsule()
+                .fill(accented ? AnyShapeStyle(Theme.brandGradient) : AnyShapeStyle(Color.clear))
+                .frame(width: 24, height: 3)
+            Text(unit)
+                .font(Theme.Typography.footnote)
+                .foregroundStyle(Theme.Palette.inkSecondary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+        }
+        .frame(maxWidth: .infinity)
     }
 
     // MARK: - Tags
@@ -133,13 +166,12 @@ struct CourseDetailView: View {
 
     private var about: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
-            Text("About")
-                .font(Theme.Typography.title)
-                .foregroundStyle(Theme.Palette.ink)
+            EyebrowText("About the course")
             Text(course.about)
                 .font(Theme.Typography.body)
                 .foregroundStyle(Theme.Palette.inkSecondary)
                 .fixedSize(horizontal: false, vertical: true)
+                .lineSpacing(3)
             if let designer = course.designer {
                 HStack(spacing: 6) {
                     Image(systemName: "pencil.and.ruler.fill")
@@ -149,7 +181,7 @@ struct CourseDetailView: View {
                         .font(Theme.Typography.callout)
                         .foregroundStyle(Theme.Palette.inkSecondary)
                 }
-                .padding(.top, 2)
+                .padding(.top, Theme.Spacing.xxs)
             }
         }
     }
@@ -158,9 +190,7 @@ struct CourseDetailView: View {
 
     private var facilities: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.md) {
-            Text("Facilities")
-                .font(Theme.Typography.title)
-                .foregroundStyle(Theme.Palette.ink)
+            EyebrowText("Facilities")
             LazyVGrid(
                 columns: [
                     GridItem(.flexible(), spacing: Theme.Spacing.sm),
@@ -198,14 +228,15 @@ struct CourseDetailView: View {
                 appState.booking.start(course: course)
                 appState.selectedTab = .book
             } label: {
-                Text("Book this course — from $\(course.greenFee)")
+                Text("Book a tee time · from $\(course.greenFee)")
+                    .contentTransition(.numericText())
             }
             .buttonStyle(GSPrimaryButtonStyle())
             .padding(.horizontal, Theme.screenPadding)
             .padding(.top, Theme.Spacing.sm)
             .padding(.bottom, Theme.Spacing.xs)
         }
-        .background(Theme.Palette.surface)
+        .background(.ultraThinMaterial)
         .shadow(color: .black.opacity(0.05), radius: 12, y: -4)
     }
 }

@@ -71,16 +71,19 @@ struct BookSlotsView: View {
         let course = booking.course
 
         ScrollView {
-            VStack(alignment: .leading, spacing: Theme.Spacing.xl) {
+            VStack(alignment: .leading, spacing: Theme.Spacing.xxl) {
                 if let course {
                     courseHeader(course)
                 }
 
                 VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
                     EyebrowText("Step 1 of 3")
-                    Text("Pick a tee time")
-                        .font(Theme.Typography.title)
+                    Text("Pick a\ntee time")
+                        .font(Theme.Typography.display(40, .bold))
                         .foregroundStyle(Theme.Palette.ink)
+                        .lineLimit(2)
+                        .minimumScaleFactor(0.7)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
 
                 dateSelector(booking: booking)
@@ -145,6 +148,7 @@ struct BookSlotsView: View {
                 .padding(.horizontal, Theme.screenPadding)
             }
             .padding(.horizontal, -Theme.screenPadding)
+            .animation(.spring(response: 0.4, dampingFraction: 0.85), value: booking.date)
         }
     }
 
@@ -177,13 +181,14 @@ struct BookSlotsView: View {
             .frame(maxWidth: .infinity)
             .padding(.vertical, Theme.Spacing.xxl)
         } else {
-            VStack(alignment: .leading, spacing: Theme.Spacing.lg) {
+            VStack(alignment: .leading, spacing: Theme.Spacing.xl) {
                 ForEach(booking.slots) { slot in
                     if !slot.teeTimes.isEmpty {
                         periodSection(slot: slot, booking: booking)
                     }
                 }
             }
+            .animation(.spring(response: 0.4, dampingFraction: 0.85), value: booking.selectedTeeTime?.id)
         }
     }
 
@@ -198,14 +203,12 @@ struct BookSlotsView: View {
                 Text("\(slot.teeTimes.filter { !$0.isSoldOut }.count) open")
                     .font(Theme.Typography.footnote)
                     .foregroundStyle(Theme.Palette.inkTertiary)
+                    .contentTransition(.numericText())
             }
 
-            LazyVGrid(
-                columns: Array(repeating: GridItem(.flexible(), spacing: Theme.Spacing.sm), count: 3),
-                spacing: Theme.Spacing.sm
-            ) {
+            VStack(spacing: Theme.Spacing.sm) {
                 ForEach(slot.teeTimes) { teeTime in
-                    TeeTimeCell(
+                    TeeTimeRow(
                         teeTime: teeTime,
                         isSelected: booking.selectedTeeTime?.id == teeTime.id
                     ) {
@@ -239,6 +242,7 @@ struct BookSlotsView: View {
             )
         }
         .gsCard()
+        .animation(.spring(response: 0.4, dampingFraction: 0.85), value: booking.players)
     }
 
     // MARK: - Bottom CTA
@@ -246,7 +250,7 @@ struct BookSlotsView: View {
     private func bottomBar(booking: BookingViewModel) -> some View {
         VStack(spacing: Theme.Spacing.sm) {
             if let teeTime = booking.selectedTeeTime {
-                HStack {
+                HStack(alignment: .lastTextBaseline) {
                     VStack(alignment: .leading, spacing: 1) {
                         Text(teeTime.timeDisplay)
                             .font(Theme.Typography.headline)
@@ -255,18 +259,21 @@ struct BookSlotsView: View {
                         Text("\(booking.players) \(booking.players == 1 ? "player" : "players")")
                             .font(Theme.Typography.footnote)
                             .foregroundStyle(Theme.Palette.inkSecondary)
+                            .contentTransition(.numericText())
                     }
                     Spacer(minLength: 0)
-                    VStack(alignment: .trailing, spacing: 1) {
+                    HStack(alignment: .firstTextBaseline, spacing: Theme.Spacing.xxs) {
                         Text("$\(teeTime.price * booking.players)")
-                            .font(Theme.Typography.title2)
+                            .font(Theme.Typography.display(28, .bold))
                             .foregroundStyle(Theme.Palette.ink)
                             .contentTransition(.numericText())
-                        Text("green fees")
+                        Text("total")
                             .font(Theme.Typography.caption)
                             .foregroundStyle(Theme.Palette.inkTertiary)
                     }
                 }
+                .animation(.spring(response: 0.4, dampingFraction: 0.85), value: booking.players)
+                .animation(.spring(response: 0.4, dampingFraction: 0.85), value: booking.selectedTeeTime?.id)
             }
 
             Button("Continue") {
@@ -313,11 +320,11 @@ private struct DayPill: View {
                         isSelected ? Theme.Palette.onDarkSecondary : Theme.Palette.inkSecondary
                     )
                 Text(Self.dayNumber(date))
-                    .font(Theme.Typography.title2)
+                    .font(Theme.Typography.display(24, .bold))
                     .foregroundStyle(isSelected ? Theme.Palette.onDark : Theme.Palette.ink)
                     .contentTransition(.numericText())
             }
-            .frame(width: 54)
+            .frame(width: 56)
             .padding(.vertical, Theme.Spacing.sm)
             .background(
                 isSelected ? Theme.Palette.primary : Theme.Palette.surface,
@@ -328,7 +335,7 @@ private struct DayPill: View {
                     .stroke(Theme.Palette.hairline, lineWidth: isSelected ? 0 : 1)
             )
         }
-        .buttonStyle(.plain)
+        .buttonStyle(PressScaleStyle())
     }
 
     private static func weekday(_ date: Date) -> String {
@@ -344,70 +351,129 @@ private struct DayPill: View {
     }
 }
 
-// MARK: - Tee-time cell
+// MARK: - Tee-time row
 
-private struct TeeTimeCell: View {
+/// Full-width editorial tee-time row: a big time number leads, price and remaining
+/// spots trail. Prime / limited slots (2 or fewer left) get the living green
+/// `BrandGradientDrift` texture; sold-out slots are dimmed and disabled.
+private struct TeeTimeRow: View {
     let teeTime: TeeTime
     let isSelected: Bool
     let action: () -> Void
 
+    private var isPrime: Bool { !teeTime.isSoldOut && teeTime.spotsLeft <= 2 }
+    private var onDark: Bool { isSelected || isPrime }
+
     var body: some View {
         Button(action: action) {
-            VStack(spacing: 3) {
-                Text(teeTime.timeDisplay)
-                    .font(Theme.Typography.callout)
-                    .fontWeight(.semibold)
-                    .foregroundStyle(timeColor)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.85)
+            HStack(alignment: .center, spacing: Theme.Spacing.md) {
+                // Big time number + tiny meridiem
+                HStack(alignment: .firstTextBaseline, spacing: Theme.Spacing.xxs) {
+                    Text(clockText)
+                        .font(Theme.Typography.display(32, .bold))
+                        .foregroundStyle(timeColor)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
+                        .contentTransition(.numericText())
+                    Text(meridiemText)
+                        .font(Theme.Typography.footnote)
+                        .foregroundStyle(meridiemColor)
+                }
 
-                Text("$\(teeTime.price)")
-                    .font(Theme.Typography.footnote)
-                    .foregroundStyle(priceColor)
+                Spacer(minLength: 0)
 
-                Text(subtitle)
-                    .font(Theme.Typography.caption)
-                    .foregroundStyle(subtitleColor)
+                // Price + remaining spots
+                VStack(alignment: .trailing, spacing: 2) {
+                    HStack(alignment: .firstTextBaseline, spacing: 1) {
+                        Text("$")
+                            .font(Theme.Typography.footnote)
+                            .foregroundStyle(priceUnitColor)
+                        Text("\(teeTime.price)")
+                            .font(Theme.Typography.display(20, .semibold))
+                            .foregroundStyle(priceColor)
+                            .contentTransition(.numericText())
+                    }
+                    Text(subtitle)
+                        .font(Theme.Typography.caption)
+                        .foregroundStyle(subtitleColor)
+                        .contentTransition(.numericText())
+                }
             }
+            .padding(.horizontal, Theme.Spacing.lg)
+            .padding(.vertical, Theme.Spacing.md)
             .frame(maxWidth: .infinity)
-            .padding(.vertical, Theme.Spacing.sm)
             .background(background)
+            .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.md, style: .continuous))
             .overlay(
-                RoundedRectangle(cornerRadius: Theme.Radius.sm, style: .continuous)
+                RoundedRectangle(cornerRadius: Theme.Radius.md, style: .continuous)
                     .stroke(borderColor, lineWidth: isSelected ? 2 : 1)
             )
             .opacity(teeTime.isSoldOut ? 0.5 : 1)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(PressScaleStyle())
         .disabled(teeTime.isSoldOut)
     }
 
-    private var subtitle: String {
-        teeTime.isSoldOut ? "Sold out" : "\(teeTime.spotsLeft) left"
+    // MARK: Time parsing ("9:00 AM" -> "9:00" + "AM")
+
+    private var clockText: String {
+        let parts = teeTime.timeDisplay.split(separator: " ")
+        return parts.first.map(String.init) ?? teeTime.timeDisplay
     }
+
+    private var meridiemText: String {
+        let parts = teeTime.timeDisplay.split(separator: " ")
+        return parts.count > 1 ? String(parts[1]) : ""
+    }
+
+    private var subtitle: String {
+        if teeTime.isSoldOut { return "Sold out" }
+        if isPrime { return teeTime.spotsLeft == 1 ? "1 left" : "\(teeTime.spotsLeft) left" }
+        return "\(teeTime.spotsLeft) left"
+    }
+
+    // MARK: Styling
 
     @ViewBuilder
     private var background: some View {
-        RoundedRectangle(cornerRadius: Theme.Radius.sm, style: .continuous)
-            .fill(isSelected ? Theme.Palette.primary : Theme.Palette.surface)
+        if isSelected {
+            Theme.Palette.primary
+        } else if isPrime {
+            BrandGradientDrift()
+        } else {
+            Theme.Palette.surface
+        }
     }
 
     private var borderColor: Color {
-        isSelected ? Theme.Palette.primary : Theme.Palette.hairline
+        if isSelected { return Theme.Palette.primary }
+        if isPrime { return .clear }
+        return Theme.Palette.hairline
     }
 
     private var timeColor: Color {
         if teeTime.isSoldOut { return Theme.Palette.inkTertiary }
-        return isSelected ? Theme.Palette.onDark : Theme.Palette.ink
+        return onDark ? Theme.Palette.onDark : Theme.Palette.ink
+    }
+
+    private var meridiemColor: Color {
+        if teeTime.isSoldOut { return Theme.Palette.inkTertiary }
+        return onDark ? Theme.Palette.onDarkSecondary : Theme.Palette.inkSecondary
     }
 
     private var priceColor: Color {
-        isSelected ? Theme.Palette.onDark : Theme.Palette.inkSecondary
+        if teeTime.isSoldOut { return Theme.Palette.inkTertiary }
+        return onDark ? Theme.Palette.onDark : Theme.Palette.ink
+    }
+
+    private var priceUnitColor: Color {
+        if teeTime.isSoldOut { return Theme.Palette.inkTertiary }
+        return onDark ? Theme.Palette.onDarkSecondary : Theme.Palette.inkSecondary
     }
 
     private var subtitleColor: Color {
         if teeTime.isSoldOut { return Theme.Palette.inkTertiary }
-        return isSelected ? Theme.Palette.onDarkSecondary : Theme.Palette.inkTertiary
+        return onDark ? Theme.Palette.onDarkSecondary : Theme.Palette.inkTertiary
     }
 }
 
