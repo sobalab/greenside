@@ -1,6 +1,8 @@
 import SwiftUI
 
-/// The **Browse** tab root: a searchable, filterable catalogue of courses.
+/// The **Browse** tab root, restyled into the Birdie design language: a big
+/// editorial header over sage ground, a frosted-paper search pill, a row of
+/// rounded filter chips, and a live list of `DiscoverCourseCard`s.
 ///
 /// Owns its own `NavigationStack` and pushes `CourseDetailView` for any tapped
 /// course. Results are driven live by `searchCourses(query:filters:)` — the
@@ -13,6 +15,7 @@ struct BrowseView: View {
     @State private var selected: Set<CourseFilter> = []
     @State private var results: [Course] = []
     @State private var isLoading: Bool = false
+    @State private var selectedCourse: Course?
 
     /// Encodes the current query + filter selection so `.task(id:)` re-fires
     /// on any change to either input.
@@ -25,9 +28,6 @@ struct BrowseView: View {
     }
 
     private var resultCountLabel: String {
-        if isLoading && results.isEmpty {
-            return "Finding the best rounds near you"
-        }
         let count = results.count
         return count == 1 ? "1 course available" : "\(count) courses available"
     }
@@ -35,25 +35,27 @@ struct BrowseView: View {
     var body: some View {
         NavigationStack {
             ScrollView {
-                LazyVStack(alignment: .leading, spacing: Theme.Spacing.lg, pinnedViews: []) {
+                LazyVStack(alignment: .leading, spacing: 20) {
                     header
 
                     BrowseSearchField(query: $query)
-                        .padding(.horizontal, Theme.screenPadding)
+                        .padding(.horizontal, 20)
 
                     filterChips
 
                     resultsSection
-                        .padding(.horizontal, Theme.screenPadding)
+                        .padding(.horizontal, 20)
+                        .padding(.top, 4)
                 }
-                .padding(.top, Theme.Spacing.xs)
-                .padding(.bottom, Theme.Spacing.xxxl)
+                .padding(.top, 8)
+                .padding(.bottom, 48)
             }
-            .background(Theme.Palette.background.ignoresSafeArea())
+            .background(Theme.Palette.ground.ignoresSafeArea())
             .scrollDismissesKeyboard(.immediately)
-            .navigationBarTitleDisplayMode(.inline)
             .toolbar(.hidden, for: .navigationBar)
-            .navigationDestination(for: Course.self) { CourseDetailView(course: $0) }
+            .navigationDestination(item: $selectedCourse) { course in
+                CourseDetailView(course: course)
+            }
             .task(id: reloadKey) {
                 isLoading = true
                 results = await appState.service.searchCourses(query: query, filters: selected)
@@ -65,29 +67,36 @@ struct BrowseView: View {
     // MARK: - Header
 
     private var header: some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.xxs) {
-            EyebrowText("Explore")
+        VStack(alignment: .leading, spacing: 6) {
+            Text("EXPLORE")
+                .font(.body(12, .semibold))
+                .tracking(1.2)
+                .textCase(.uppercase)
+                .foregroundStyle(Theme.Palette.muted)
+
             Text("Browse courses")
-                .font(Theme.Typography.largeTitle)
-                .foregroundStyle(Theme.Palette.ink)
+                .font(.display(38, .bold))
+                .foregroundStyle(Theme.Palette.charcoal)
+                .fixedSize(horizontal: false, vertical: true)
+
             Text(resultCountLabel)
-                .font(Theme.Typography.footnote)
-                .foregroundStyle(Theme.Palette.inkSecondary)
+                .font(.body(13, .medium))
+                .foregroundStyle(Theme.Palette.muted)
                 .contentTransition(.numericText())
-                .animation(.snappy, value: results.count)
+                .animation(.spring(response: 0.4, dampingFraction: 0.8), value: results.count)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, Theme.screenPadding)
-        .padding(.top, Theme.Spacing.sm)
+        .padding(.horizontal, 20)
+        .padding(.top, 8)
     }
 
     // MARK: - Filters
 
     private var filterChips: some View {
         ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: Theme.Spacing.xs) {
+            HStack(spacing: 10) {
                 ForEach(CourseFilter.allCases) { filter in
-                    GSChip(
+                    BrowseFilterChip(
                         title: filter.rawValue,
                         isSelected: selected.contains(filter)
                     ) {
@@ -95,17 +104,19 @@ struct BrowseView: View {
                     }
                 }
             }
-            .padding(.horizontal, Theme.screenPadding)
+            .padding(.horizontal, 20)
             .padding(.vertical, 2)
         }
     }
 
     private func toggle(_ filter: CourseFilter) {
         Haptics.selection()
-        if selected.contains(filter) {
-            selected.remove(filter)
-        } else {
-            selected.insert(filter)
+        withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+            if selected.contains(filter) {
+                selected.remove(filter)
+            } else {
+                selected.insert(filter)
+            }
         }
     }
 
@@ -116,14 +127,13 @@ struct BrowseView: View {
         if isLoading && results.isEmpty {
             BrowseLoadingState()
         } else if results.isEmpty {
-            BrowseEmptyState(hasQuery: !query.isEmpty || !selected.isEmpty)
+            BrowseEmptyState()
         } else {
-            LazyVStack(spacing: Theme.Spacing.md) {
+            LazyVStack(spacing: 12) {
                 ForEach(results) { course in
-                    NavigationLink(value: course) {
-                        BrowseCourseCard(course: course)
+                    DiscoverCourseCard(course: course) {
+                        selectedCourse = course
                     }
-                    .buttonStyle(.plain)
                 }
             }
         }
@@ -132,107 +142,78 @@ struct BrowseView: View {
 
 // MARK: - Search field
 
-/// A rounded, hairline-bordered search pill with a leading magnifier and an
-/// inline clear button.
+/// A rounded, paper search pill with a leading magnifier and an inline clear
+/// button — a real editable field styled to hover on the sage ground.
 private struct BrowseSearchField: View {
     @Binding var query: String
 
     var body: some View {
-        HStack(spacing: Theme.Spacing.sm) {
+        HStack(spacing: 12) {
             Image(systemName: "magnifyingglass")
-                .font(.system(size: 16, weight: .semibold))
-                .foregroundStyle(Theme.Palette.inkTertiary)
+                .font(.system(size: 16, weight: .medium))
+                .foregroundStyle(Theme.Palette.muted)
 
             TextField("", text: $query, prompt: placeholder)
-                .font(Theme.Typography.body)
-                .foregroundStyle(Theme.Palette.ink)
+                .font(.body(16, .regular))
+                .foregroundStyle(Theme.Palette.charcoal)
                 .textInputAutocapitalization(.never)
                 .autocorrectionDisabled()
                 .submitLabel(.search)
 
             if !query.isEmpty {
                 Button {
+                    Haptics.tap()
                     query = ""
                 } label: {
                     Image(systemName: "xmark.circle.fill")
-                        .font(.system(size: 16))
-                        .foregroundStyle(Theme.Palette.inkTertiary)
+                        .font(.system(size: 17))
+                        .foregroundStyle(Theme.Palette.muted)
                 }
                 .buttonStyle(.plain)
                 .transition(.opacity.combined(with: .scale))
             }
         }
-        .padding(.horizontal, Theme.Spacing.md)
-        .padding(.vertical, Theme.Spacing.sm + 2)
-        .background(Theme.Palette.surface, in: Capsule())
-        .overlay(Capsule().stroke(Theme.Palette.hairline, lineWidth: 1))
-        .animation(.snappy, value: query.isEmpty)
+        .padding(.horizontal, 18)
+        .padding(.vertical, 15)
+        .background(Theme.Palette.paper, in: Capsule())
+        .overlay(Capsule().stroke(Theme.Palette.mist, lineWidth: 1))
+        .shadow(color: .black.opacity(0.05), radius: 14, y: 6)
+        .animation(.spring(response: 0.35, dampingFraction: 0.8), value: query.isEmpty)
     }
 
     private var placeholder: Text {
         Text("Search courses or cities")
-            .font(Theme.Typography.body)
-            .foregroundColor(Theme.Palette.inkTertiary)
+            .foregroundColor(Theme.Palette.muted)
     }
 }
 
-// MARK: - Result card
+// MARK: - Filter chip
 
-/// A full-width course card: hero image with a price tag and up to two course
-/// tags, then a name / location row with an inline rating.
-private struct BrowseCourseCard: View {
-    let course: Course
+/// A springy filter chip: charcoal fill + paper text when selected, otherwise a
+/// paper fill with a mist hairline.
+private struct BrowseFilterChip: View {
+    let title: String
+    let isSelected: Bool
+    let action: () -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
-            CourseImage(course: course)
-                .frame(maxWidth: .infinity)
-                .frame(height: 170)
-                .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.md, style: .continuous))
-                .overlay(alignment: .topTrailing) {
-                    PriceTag(amount: course.greenFee)
-                        .padding(Theme.Spacing.sm)
-                }
-                .overlay(alignment: .bottomLeading) {
-                    HStack(spacing: Theme.Spacing.xs) {
-                        ForEach(course.tags.prefix(2)) { tag in
-                            // White-on-dark chip so tags stay legible over the
-                            // course imagery (GSTag's tint is for light cards).
-                            Text(tag.rawValue)
-                                .font(Theme.Typography.caption)
-                                .foregroundStyle(.white)
-                                .padding(.horizontal, 10)
-                                .padding(.vertical, 5)
-                                .background(.black.opacity(0.35), in: Capsule())
-                        }
+        Button(action: action) {
+            Text(title)
+                .font(.body(14, .medium))
+                .foregroundStyle(isSelected ? Theme.Palette.paper : Theme.Palette.charcoal)
+                .padding(.horizontal, 18)
+                .padding(.vertical, 11)
+                .background {
+                    if isSelected {
+                        Capsule().fill(Theme.Palette.charcoal)
+                    } else {
+                        Capsule()
+                            .fill(Theme.Palette.paper)
+                            .overlay(Capsule().stroke(Theme.Palette.mist, lineWidth: 1))
                     }
-                    .padding(Theme.Spacing.sm)
                 }
-
-            HStack(alignment: .top, spacing: Theme.Spacing.sm) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(course.name)
-                        .font(Theme.Typography.headline)
-                        .foregroundStyle(Theme.Palette.ink)
-                        .lineLimit(1)
-                    Text(course.location)
-                        .font(Theme.Typography.footnote)
-                        .foregroundStyle(Theme.Palette.inkSecondary)
-                        .lineLimit(1)
-                }
-
-                Spacer(minLength: Theme.Spacing.xs)
-
-                RatingLabel(
-                    rating: course.rating,
-                    trailing: "\(course.slotsAvailableToday) slots"
-                )
-                .fixedSize()
-            }
-            .padding(.horizontal, Theme.Spacing.xxs)
-            .padding(.bottom, Theme.Spacing.xxs)
         }
-        .gsCard(padding: Theme.Spacing.sm)
+        .buttonStyle(PressScaleStyle())
     }
 }
 
@@ -241,45 +222,40 @@ private struct BrowseCourseCard: View {
 /// Centered spinner shown on first load before any results arrive.
 private struct BrowseLoadingState: View {
     var body: some View {
-        VStack(spacing: Theme.Spacing.md) {
+        VStack(spacing: 16) {
             ProgressView()
-                .tint(Theme.Palette.primary)
-            Text("Searching courses")
-                .font(Theme.Typography.footnote)
-                .foregroundStyle(Theme.Palette.inkSecondary)
+                .tint(Theme.Palette.charcoal)
+            Text("Finding the best rounds near you")
+                .font(.body(13, .medium))
+                .foregroundStyle(Theme.Palette.muted)
         }
         .frame(maxWidth: .infinity)
-        .padding(.vertical, Theme.Spacing.xxxl * 2)
+        .padding(.vertical, 80)
     }
 }
 
 /// Muted empty state shown when a search / filter combination has no matches.
 private struct BrowseEmptyState: View {
-    let hasQuery: Bool
-
     var body: some View {
-        VStack(spacing: Theme.Spacing.sm) {
+        VStack(spacing: 14) {
             Image(systemName: "magnifyingglass")
-                .font(.system(size: 32, weight: .regular))
-                .foregroundStyle(Theme.Palette.inkTertiary)
-                .frame(width: 64, height: 64)
-                .background(Theme.Palette.surfaceMuted, in: Circle())
-                .padding(.bottom, Theme.Spacing.xxs)
+                .font(.system(size: 30, weight: .regular))
+                .foregroundStyle(Theme.Palette.muted)
+                .frame(width: 72, height: 72)
+                .background(Theme.Palette.mist, in: Circle())
 
             Text("No courses match")
-                .font(Theme.Typography.title2)
-                .foregroundStyle(Theme.Palette.ink)
+                .font(.display(24, .bold))
+                .foregroundStyle(Theme.Palette.charcoal)
 
-            Text(hasQuery
-                 ? "Try a different search or clear a few filters to see more tee times."
-                 : "We couldn’t find any courses right now. Check back in a moment.")
-                .font(Theme.Typography.footnote)
-                .foregroundStyle(Theme.Palette.inkSecondary)
+            Text("Try a different search or clear a few filters to see more tee times.")
+                .font(.body(14, .regular))
+                .foregroundStyle(Theme.Palette.muted)
                 .multilineTextAlignment(.center)
-                .padding(.horizontal, Theme.Spacing.xl)
+                .padding(.horizontal, 24)
         }
         .frame(maxWidth: .infinity)
-        .padding(.vertical, Theme.Spacing.xxxl)
+        .padding(.vertical, 56)
     }
 }
 

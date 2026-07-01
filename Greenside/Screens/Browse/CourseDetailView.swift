@@ -1,130 +1,125 @@
 import SwiftUI
 
-/// A pushed detail screen for a single course. Shows a full-bleed hero image,
-/// key stats, tags, an about section, facilities, and reviews, with a persistent
-/// "Book this course" CTA pinned to the bottom safe area.
+/// A pushed detail screen for a single course, in the Birdie design language.
+/// Full-width clipped hero image, an oversized course name, hero metric blocks,
+/// tags, about, facilities, and reviews — with a frosted volt "Book" CTA pinned
+/// to the bottom safe area. Navigation, data, and interactions are preserved.
 struct CourseDetailView: View {
     let course: Course
 
     @Environment(AppState.self) private var appState
+    @Environment(\.dismiss) private var dismiss
     @State private var isSaved = false
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: Theme.Spacing.xl) {
+            VStack(alignment: .leading, spacing: 26) {
                 hero
-                VStack(alignment: .leading, spacing: Theme.Spacing.xl) {
-                    statsCard
-                    if !course.tags.isEmpty { tags }
-                    about
-                    if !course.facilities.isEmpty { facilities }
-                    if !course.reviews.isEmpty { reviews }
+                title
+                metrics
+                if !course.tags.isEmpty { tags }
+                about
+                if !course.facilities.isEmpty { facilities }
+                if !course.reviews.isEmpty { reviews }
+            }
+            .padding(.horizontal, 20)
+            .padding(.top, 8)
+            .padding(.bottom, 40)
+        }
+        .background(Theme.Palette.ground.ignoresSafeArea())
+        .scrollIndicators(.hidden)
+        .toolbar(.hidden, for: .navigationBar)
+        .safeAreaInset(edge: .top, spacing: 0) { topBar }
+        .safeAreaInset(edge: .bottom, spacing: 0) { bottomBar }
+    }
+
+    // MARK: - Top bar
+
+    private var topBar: some View {
+        HStack {
+            CircleIconButton(systemName: "chevron.left", style: .frosted) {
+                dismiss()
+            }
+            Spacer()
+            CircleIconButton(
+                systemName: isSaved ? "heart.fill" : "heart",
+                style: isSaved ? .volt : .frosted
+            ) {
+                withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+                    isSaved.toggle()
                 }
-                .padding(.horizontal, Theme.screenPadding)
-                .padding(.top, Theme.Spacing.xl)
-                .padding(.bottom, Theme.Spacing.xxl)
             }
         }
-        .background(Theme.Palette.background)
-        .scrollIndicators(.hidden)
-        .navigationBarTitleDisplayMode(.inline)
-        .toolbarBackground(.hidden, for: .navigationBar)
-        .ignoresSafeArea(edges: .top)
-        .safeAreaInset(edge: .bottom, spacing: 0) { bottomBar }
+        .padding(.horizontal, 20)
+        .padding(.bottom, 8)
     }
 
     // MARK: - Hero
 
     private var hero: some View {
-        ZStack(alignment: .bottomLeading) {
-            CourseImage(course: course)
-                .frame(maxWidth: .infinity)
-                .frame(height: 300)
-                .clipped()
-
-            LinearGradient(
-                colors: [Color.black.opacity(0.55), .clear],
-                startPoint: .bottom,
-                endPoint: .top
-            )
-
-            VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
-                Text(course.name)
-                    .font(Theme.Typography.titleHero)
-                    .foregroundStyle(Theme.Palette.onDark)
-                    .shadow(color: .black.opacity(0.25), radius: 8, y: 2)
-
-                HStack(spacing: 6) {
-                    Image(systemName: "mappin.and.ellipse")
-                        .font(.system(size: 13, weight: .semibold))
-                    Text(course.location)
-                        .font(Theme.Typography.body)
-                }
-                .foregroundStyle(Theme.Palette.onDark.opacity(0.9))
-
-                HStack(spacing: 5) {
-                    Image(systemName: "star.fill")
-                        .font(.system(size: 12))
-                        .foregroundStyle(Theme.Palette.star)
-                    Text(course.ratingDisplay)
-                        .font(Theme.Typography.callout)
-                        .foregroundStyle(Theme.Palette.onDark)
-                    Text("· \(course.reviewCount) reviews")
-                        .font(Theme.Typography.callout)
-                        .foregroundStyle(Theme.Palette.onDark.opacity(0.8))
-                }
-                .padding(.top, 2)
-            }
-            .padding(Theme.screenPadding)
-        }
-        .frame(height: 300)
-        .overlay(alignment: .topTrailing) { saveButton }
-    }
-
-    private var saveButton: some View {
-        Button {
-            Haptics.tap()
-            isSaved.toggle()
-        } label: {
-            Image(systemName: isSaved ? "heart.fill" : "heart")
-                .font(.system(size: 16, weight: .semibold))
-                .foregroundStyle(isSaved ? Theme.Palette.lime : .white)
-                .frame(width: 40, height: 40)
-                .background(.ultraThinMaterial, in: Circle())
-                .overlay(Circle().stroke(.white.opacity(0.25), lineWidth: 1))
-        }
-        .padding(.top, 54)
-        .padding(.trailing, Theme.screenPadding)
-        .animation(.easeOut(duration: 0.15), value: isSaved)
-    }
-
-    // MARK: - Stats
-
-    private var statsCard: some View {
-        HStack(alignment: .top, spacing: Theme.Spacing.sm) {
-            stat("Par", "\(course.par)")
-            Spacer(minLength: 0)
-            stat("Holes", "\(course.holes)")
-            Spacer(minLength: 0)
-            stat("Length", "\(course.lengthYards) yd")
-            Spacer(minLength: 0)
-            stat("Distance", String(format: "%.1f mi", course.distanceMiles))
-        }
-        .frame(maxWidth: .infinity)
-        .gsCard(padding: Theme.Spacing.lg)
-    }
-
-    private func stat(_ label: String, _ value: String) -> some View {
-        StatColumn(label: label, value: value, alignment: .center)
+        CourseImage(course: course)
             .frame(maxWidth: .infinity)
+            .frame(height: 260)
+            .clipShape(RoundedRectangle(cornerRadius: 30, style: .continuous))
+            .shadow(color: .black.opacity(0.08), radius: 20, y: 10)
+    }
+
+    // MARK: - Title
+
+    private var title: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text(course.name)
+                .font(.display(40, .bold))
+                .foregroundStyle(Theme.Palette.charcoal)
+                .lineLimit(2)
+                .minimumScaleFactor(0.7)
+                .fixedSize(horizontal: false, vertical: true)
+
+            HStack(spacing: 6) {
+                Image(systemName: "star.fill")
+                    .font(.system(size: 13))
+                    .foregroundStyle(Theme.Palette.charcoal)
+                Text(course.ratingDisplay)
+                    .font(.body(15, .semibold))
+                    .foregroundStyle(Theme.Palette.charcoal)
+                Text("· \(course.reviewCount) reviews · \(String(format: "%.1f", course.distanceMiles)) mi · Par \(course.par)")
+                    .font(.body(15, .regular))
+                    .foregroundStyle(Theme.Palette.muted)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+            }
+        }
+    }
+
+    // MARK: - Metrics
+
+    private var metrics: some View {
+        HStack(alignment: .top, spacing: 26) {
+            MetricBlock(value: "\(course.par)", unit: "par", tone: .volt, size: 24)
+                .fixedSize()
+            MetricBlock(value: "\(course.lengthYards)", unit: "yards", tone: .muted, size: 24)
+                .fixedSize()
+            MetricBlock(value: "\(course.holes)", unit: "holes", tone: .muted, size: 24)
+                .fixedSize()
+            MetricBlock(value: course.ratingDisplay, unit: "rating", tone: .muted, size: 24)
+                .fixedSize()
+            Spacer(minLength: 0)
+        }
+        .padding(.vertical, 4)
     }
 
     // MARK: - Tags
 
     private var tags: some View {
-        CourseDetailFlowLayout(spacing: Theme.Spacing.xs) {
+        CourseDetailFlowLayout(spacing: 8) {
             ForEach(course.tags) { tag in
-                GSTag(title: tag.rawValue)
+                Text(tag.rawValue)
+                    .font(.body(13, .medium))
+                    .foregroundStyle(Theme.Palette.charcoal)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 8)
+                    .background(Theme.Palette.paper, in: Capsule())
+                    .overlay(Capsule().stroke(Theme.Palette.mist, lineWidth: 1))
             }
         }
     }
@@ -132,22 +127,22 @@ struct CourseDetailView: View {
     // MARK: - About
 
     private var about: some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
+        VStack(alignment: .leading, spacing: 12) {
             Text("About")
-                .font(Theme.Typography.title)
-                .foregroundStyle(Theme.Palette.ink)
+                .font(.display(22, .bold))
+                .foregroundStyle(Theme.Palette.charcoal)
             Text(course.about)
-                .font(Theme.Typography.body)
-                .foregroundStyle(Theme.Palette.inkSecondary)
+                .font(.body(16, .regular))
+                .foregroundStyle(Theme.Palette.muted)
                 .fixedSize(horizontal: false, vertical: true)
             if let designer = course.designer {
                 HStack(spacing: 6) {
-                    Image(systemName: "pencil.and.ruler.fill")
-                        .font(.system(size: 12, weight: .semibold))
-                        .foregroundStyle(Theme.Palette.accent)
+                    Image(systemName: "pencil")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundStyle(Theme.Palette.muted)
                     Text("Designed by \(designer)")
-                        .font(Theme.Typography.callout)
-                        .foregroundStyle(Theme.Palette.inkSecondary)
+                        .font(.body(14, .medium))
+                        .foregroundStyle(Theme.Palette.muted)
                 }
                 .padding(.top, 2)
             }
@@ -157,16 +152,16 @@ struct CourseDetailView: View {
     // MARK: - Facilities
 
     private var facilities: some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.md) {
+        VStack(alignment: .leading, spacing: 14) {
             Text("Facilities")
-                .font(Theme.Typography.title)
-                .foregroundStyle(Theme.Palette.ink)
+                .font(.display(22, .bold))
+                .foregroundStyle(Theme.Palette.charcoal)
             LazyVGrid(
                 columns: [
-                    GridItem(.flexible(), spacing: Theme.Spacing.sm),
-                    GridItem(.flexible(), spacing: Theme.Spacing.sm),
+                    GridItem(.flexible(), spacing: 12),
+                    GridItem(.flexible(), spacing: 12),
                 ],
-                spacing: Theme.Spacing.sm
+                spacing: 12
             ) {
                 ForEach(course.facilities) { facility in
                     CourseDetailFacilityTile(facility: facility)
@@ -178,8 +173,15 @@ struct CourseDetailView: View {
     // MARK: - Reviews
 
     private var reviews: some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.md) {
-            SectionHeader(title: "Reviews", actionTitle: "\(course.reviewCount)")
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                Text("Reviews")
+                    .font(.display(22, .bold))
+                    .foregroundStyle(Theme.Palette.charcoal)
+                Text("\(course.reviewCount)")
+                    .font(.body(15, .medium))
+                    .foregroundStyle(Theme.Palette.muted)
+            }
             ForEach(course.reviews) { review in
                 CourseDetailReviewCard(review: review)
             }
@@ -189,24 +191,19 @@ struct CourseDetailView: View {
     // MARK: - Bottom CTA
 
     private var bottomBar: some View {
-        VStack(spacing: 0) {
-            Rectangle()
-                .fill(Theme.Palette.hairline)
-                .frame(height: 1)
-            Button {
-                Haptics.impact()
-                appState.booking.start(course: course)
-                appState.selectedTab = .book
-            } label: {
-                Text("Book this course — from $\(course.greenFee)")
-            }
-            .buttonStyle(GSPrimaryButtonStyle())
-            .padding(.horizontal, Theme.screenPadding)
-            .padding(.top, Theme.Spacing.sm)
-            .padding(.bottom, Theme.Spacing.xs)
+        PillButton(
+            title: "Book a tee time · from $\(course.greenFee)",
+            style: .volt,
+            fill: true
+        ) {
+            Haptics.impact()
+            appState.booking.start(course: course)
+            appState.selectedTab = .book
         }
-        .background(Theme.Palette.surface)
-        .shadow(color: .black.opacity(0.05), radius: 12, y: -4)
+        .padding(.horizontal, 20)
+        .padding(.top, 12)
+        .padding(.bottom, 8)
+        .background(.ultraThinMaterial)
     }
 }
 
@@ -216,24 +213,24 @@ private struct CourseDetailFacilityTile: View {
     let facility: Facility
 
     var body: some View {
-        HStack(spacing: Theme.Spacing.sm) {
+        HStack(spacing: 12) {
             Image(systemName: facility.systemImage)
-                .font(.system(size: 16, weight: .semibold))
-                .foregroundStyle(Theme.Palette.primary)
+                .font(.system(size: 16, weight: .medium))
+                .foregroundStyle(Theme.Palette.charcoal)
                 .frame(width: 24)
             Text(facility.name)
-                .font(Theme.Typography.callout)
-                .foregroundStyle(Theme.Palette.ink)
+                .font(.body(14, .medium))
+                .foregroundStyle(Theme.Palette.charcoal)
                 .lineLimit(1)
                 .minimumScaleFactor(0.85)
             Spacer(minLength: 0)
         }
-        .padding(.horizontal, Theme.Spacing.md)
-        .padding(.vertical, Theme.Spacing.sm + 2)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 14)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
-            Theme.Palette.surfaceMuted,
-            in: RoundedRectangle(cornerRadius: Theme.Radius.sm, style: .continuous)
+            Theme.Palette.mist,
+            in: RoundedRectangle(cornerRadius: 18, style: .continuous)
         )
     }
 }
@@ -250,27 +247,49 @@ private struct CourseDetailReviewCard: View {
     }()
 
     var body: some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
-            HStack(alignment: .top, spacing: Theme.Spacing.sm) {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .top, spacing: 12) {
                 AvatarView(name: review.authorName, size: 36)
-                VStack(alignment: .leading, spacing: 3) {
+                VStack(alignment: .leading, spacing: 4) {
                     Text(review.authorName)
-                        .font(Theme.Typography.headline)
-                        .foregroundStyle(Theme.Palette.ink)
-                    StarRow(rating: review.rating)
+                        .font(.body(15, .semibold))
+                        .foregroundStyle(Theme.Palette.charcoal)
+                    CourseDetailStarRow(rating: review.rating)
                 }
-                Spacer(minLength: Theme.Spacing.xs)
+                Spacer(minLength: 8)
                 Text(Self.dateFormatter.string(from: review.date))
-                    .font(Theme.Typography.footnote)
-                    .foregroundStyle(Theme.Palette.inkTertiary)
+                    .font(.body(13, .medium))
+                    .foregroundStyle(Theme.Palette.muted)
             }
             Text(review.text)
-                .font(Theme.Typography.body)
-                .foregroundStyle(Theme.Palette.ink)
+                .font(.body(15, .regular))
+                .foregroundStyle(Theme.Palette.charcoal)
                 .fixedSize(horizontal: false, vertical: true)
         }
+        .padding(18)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .gsCard()
+        .background(Theme.Palette.paper, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                .stroke(Theme.Palette.charcoal.opacity(0.05), lineWidth: 1)
+        )
+        .shadow(color: .black.opacity(0.05), radius: 14, y: 6)
+    }
+}
+
+// MARK: - Star row
+
+private struct CourseDetailStarRow: View {
+    let rating: Int
+
+    var body: some View {
+        HStack(spacing: 3) {
+            ForEach(0..<5, id: \.self) { index in
+                Image(systemName: index < rating ? "star.fill" : "star")
+                    .font(.system(size: 11))
+                    .foregroundStyle(index < rating ? Theme.Palette.star : Theme.Palette.muted.opacity(0.4))
+            }
+        }
     }
 }
 

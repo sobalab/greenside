@@ -42,6 +42,36 @@ enum Theme {
         /// Rating star tint.
         static let star = Color(hex: 0xE9A23B)
 
+        // MARK: - Birdie redesign palette
+        // A quiet natural ground with exactly one electric accent (volt) and one
+        // organic texture colour (clay). Everything else stays desaturated.
+
+        /// Sage — the app background.
+        static let ground = Color(hex: 0xDEE6D6)
+        /// Paper — cards and sheets.
+        static let paper = Color(hex: 0xF5F6F1)
+        /// A softly tinted secondary surface.
+        static let mist = Color(hex: 0xE9EBE4)
+        /// Near-black — primary text and dark pills (neutral, unlike `ink`).
+        static let charcoal = Color(hex: 0x14140F)
+        /// Metadata / secondary text and bars.
+        static let muted = Color(hex: 0x8B8F84)
+        /// The one loud accent — chartreuse.
+        static let volt = Color(hex: 0xE4FF4F)
+        /// Pressed / active accent.
+        static let voltDeep = Color(hex: 0xC9E82F)
+        /// Organic texture ONLY — never chrome.
+        static let clay = Color(hex: 0xE88A70)
+
+        /// Dawn gradient stops (peach → coral → pink → sky) — reserved for prime /
+        /// limited-availability status that slowly breathes. Never decoration.
+        static let dawnStops = [
+            Color(hex: 0xFFC7A0),
+            Color(hex: 0xF2917C),
+            Color(hex: 0xE98CA8),
+            Color(hex: 0x8FB9EA),
+        ]
+
         /// The four-stop brand gradient (welcome CTA, hero accents).
         static let gradientStops = [
             Color(hex: 0x2A6B54),

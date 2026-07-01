@@ -11,7 +11,7 @@ struct MainTabView: View {
     var body: some View {
         @Bindable var appState = appState
         TabView(selection: $appState.selectedTab) {
-            HomeView()
+            DiscoverView()
                 .tabItem { Label("Home", systemImage: "house") }
                 .tag(AppTab.home)
 
