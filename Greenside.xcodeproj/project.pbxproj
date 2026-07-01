@@ -10,8 +10,12 @@
 		1000000000000000000000A1 /* Greenside.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Greenside.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		100000000000000000000B2 /* Exceptions for "Greenside" folder in "Greenside" target */ = {isa = PBXFileSystemSynchronizedBuildFileExceptionSet; membershipExceptions = (Resources/greenside-topo.js, ); target = 1000000000000000000000F1 /* Greenside */; };
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		1000000000000000000000B1 /* Greenside */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = Greenside; sourceTree = "<group>"; };
+		1000000000000000000000B1 /* Greenside */ = {isa = PBXFileSystemSynchronizedRootGroup; exceptions = (100000000000000000000B2 /* Exceptions for "Greenside" folder in "Greenside" target */, ); explicitFileTypes = {}; explicitFolders = (); path = Greenside; sourceTree = "<group>"; };
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
