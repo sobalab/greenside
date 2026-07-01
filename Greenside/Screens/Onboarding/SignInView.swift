@@ -6,43 +6,61 @@ import SwiftUI
 /// gate on real credentials.
 struct SignInView: View {
     @Environment(AppState.self) private var appState
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     @State private var email = "joe.bradley@example.com"
     @State private var password = ""
+
+    @FocusState private var focusedField: Field?
+    @State private var appeared = false
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: Theme.Spacing.xl) {
                 header
+                    .modifier(Entrance(index: 0, appeared: appeared, reduceMotion: reduceMotion))
 
                 VStack(spacing: Theme.Spacing.md) {
                     SignInField(
                         eyebrow: "Email",
                         placeholder: "you@example.com",
                         text: $email,
-                        isSecure: false
+                        isSecure: false,
+                        field: .email,
+                        focus: $focusedField
                     )
                     SignInField(
                         eyebrow: "Password",
                         placeholder: "Enter your password",
                         text: $password,
-                        isSecure: true
+                        isSecure: true,
+                        field: .password,
+                        focus: $focusedField
                     )
                 }
+                .modifier(Entrance(index: 1, appeared: appeared, reduceMotion: reduceMotion))
 
                 VStack(spacing: Theme.Spacing.md) {
-                    Button("Sign in") { signIn() }
-                        .buttonStyle(GSPrimaryButtonStyle())
+                    Button("Sign in") {
+                        Haptics.impact()
+                        signIn()
+                    }
+                    .buttonStyle(GSPrimaryButtonStyle())
 
                     Button("Forgot password?") { }
                         .font(Theme.Typography.callout)
-                        .foregroundStyle(Theme.Palette.accent)
+                        .foregroundStyle(Theme.Palette.inkSecondary)
                         .frame(maxWidth: .infinity)
                 }
+                .modifier(Entrance(index: 2, appeared: appeared, reduceMotion: reduceMotion))
 
                 orDivider
+                    .modifier(Entrance(index: 3, appeared: appeared, reduceMotion: reduceMotion))
 
-                Button(action: signIn) {
+                Button {
+                    Haptics.tap()
+                    signIn()
+                } label: {
                     HStack(spacing: Theme.Spacing.xs) {
                         Image(systemName: "apple.logo")
                             .font(.system(size: 17, weight: .medium))
@@ -57,10 +75,12 @@ struct SignInView: View {
                         in: RoundedRectangle(cornerRadius: Theme.Radius.md, style: .continuous)
                     )
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(PressScaleStyle())
+                .modifier(Entrance(index: 4, appeared: appeared, reduceMotion: reduceMotion))
 
                 footer
                     .padding(.top, Theme.Spacing.xs)
+                    .modifier(Entrance(index: 5, appeared: appeared, reduceMotion: reduceMotion))
             }
             .padding(.horizontal, Theme.screenPadding)
             .padding(.top, Theme.Spacing.xs)
@@ -68,13 +88,15 @@ struct SignInView: View {
         }
         .scrollDismissesKeyboard(.interactively)
         .background(Theme.Palette.background.ignoresSafeArea())
+        .onAppear { appeared = true }
     }
 
     // MARK: - Sections
 
     private var header: some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.lg) {
+        VStack(alignment: .leading, spacing: Theme.Spacing.xl) {
             Button {
+                Haptics.tap()
                 appState.phase = .welcome
             } label: {
                 Image(systemName: "chevron.left")
@@ -83,15 +105,18 @@ struct SignInView: View {
                     .frame(width: 44, height: 44)
                     .background(Theme.Palette.surfaceMuted, in: Circle())
             }
-            .buttonStyle(.plain)
+            .buttonStyle(PressScaleStyle())
 
             VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
                 Text("Welcome back")
-                    .font(Theme.Typography.largeTitle)
+                    .font(Theme.Typography.display(44, .bold))
                     .foregroundStyle(Theme.Palette.ink)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
                 Text("Sign in to pick up where you left off.")
                     .font(Theme.Typography.body)
                     .foregroundStyle(Theme.Palette.inkSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
             }
         }
     }
@@ -117,9 +142,12 @@ struct SignInView: View {
             Text("New to Greenside?")
                 .font(Theme.Typography.callout)
                 .foregroundStyle(Theme.Palette.inkSecondary)
-            Button("Create account") { signIn() }
-                .font(Theme.Typography.callout)
-                .foregroundStyle(Theme.Palette.accent)
+            Button("Create account") {
+                Haptics.tap()
+                signIn()
+            }
+            .font(Theme.Typography.callout)
+            .foregroundStyle(Theme.Palette.accent)
         }
         .frame(maxWidth: .infinity)
     }
@@ -129,18 +157,52 @@ struct SignInView: View {
     private func signIn() {
         appState.phase = .main
     }
+
+    // MARK: - Focus
+
+    /// The two focusable inputs on this screen.
+    fileprivate enum Field: Hashable {
+        case email, password
+    }
+}
+
+// MARK: - Staggered entrance
+
+/// A graceful, springy entrance for a block: it fades in and slides up with a
+/// small per-block delay so the screen assembles top-to-bottom. Respects Reduce
+/// Motion by dropping the vertical offset.
+private struct Entrance: ViewModifier {
+    let index: Int
+    let appeared: Bool
+    let reduceMotion: Bool
+
+    func body(content: Content) -> some View {
+        content
+            .opacity(appeared ? 1 : 0)
+            .offset(y: reduceMotion ? 0 : (appeared ? 0 : 16))
+            .animation(
+                .spring(response: 0.6, dampingFraction: 0.85)
+                    .delay(Double(index) * 0.07),
+                value: appeared
+            )
+    }
 }
 
 // MARK: - Field
 
 /// A labelled input row: an eyebrow above a rounded white surface hosting the
 /// field. Switches between a plain `TextField` and a `SecureField` based on
-/// `isSecure`; the email variant configures itself for email entry.
+/// `isSecure`; the email variant configures itself for email entry. When focused,
+/// the border springs to the brand green to signal the active field.
 private struct SignInField: View {
     let eyebrow: String
     let placeholder: String
     @Binding var text: String
     let isSecure: Bool
+    let field: SignInView.Field
+    @FocusState.Binding var focus: SignInView.Field?
+
+    private var isFocused: Bool { focus == field }
 
     var body: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
@@ -161,6 +223,7 @@ private struct SignInField: View {
             .font(Theme.Typography.body)
             .foregroundStyle(Theme.Palette.ink)
             .tint(Theme.Palette.primary)
+            .focused($focus, equals: field)
             .padding(.horizontal, Theme.Spacing.md)
             .padding(.vertical, Theme.Spacing.md - 2)
             .background(
@@ -169,8 +232,12 @@ private struct SignInField: View {
             )
             .overlay(
                 RoundedRectangle(cornerRadius: Theme.Radius.md, style: .continuous)
-                    .stroke(Theme.Palette.hairline, lineWidth: 1)
+                    .stroke(
+                        isFocused ? Theme.Palette.primary : Theme.Palette.hairline,
+                        lineWidth: isFocused ? 1.5 : 1
+                    )
             )
+            .animation(.spring(response: 0.3, dampingFraction: 0.85), value: isFocused)
         }
     }
 }
