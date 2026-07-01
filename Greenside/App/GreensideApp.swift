@@ -12,7 +12,7 @@ struct GreensideApp: App {
         WindowGroup {
             RootView()
                 .environment(appState)
-                .tint(Theme.Palette.charcoal)
+                .tint(Theme.Palette.primary)
         }
     }
 }

@@ -41,9 +41,40 @@ final class AppState {
     init(service: GreensideService = MockGreensideService()) {
         self.service = service
         self.booking = BookingViewModel(service: service)
+        #if DEBUG
+        applyDebugScreenOverride()
+        #endif
     }
 
     func completeOnboarding() { phase = .main }
     func showSignIn() { phase = .signIn }
     func signOut() { phase = .welcome }
+
+    #if DEBUG
+    private func applyDebugScreenOverride() {
+        guard let screen = ProcessInfo.processInfo.environment["GS_SCREEN"] else { return }
+        switch screen {
+        case "signin": phase = .signIn
+        case "home": phase = .main; selectedTab = .home
+        case "browse": phase = .main; selectedTab = .browse
+        case "profile": phase = .main; selectedTab = .profile
+        case "book": phase = .main; selectedTab = .book; booking.start(course: SampleData.bethpageBlack)
+        case "confirm-profile":
+            phase = .main; selectedTab = .book; seedFull(); booking.path = [.confirmProfile]
+        case "review-pay":
+            phase = .main; selectedTab = .book; seedFull(); booking.path = [.confirmProfile, .reviewAndPay]
+        case "confirmation":
+            phase = .main; selectedTab = .book; seedFull(); booking.path = [.confirmation]
+        default: break
+        }
+    }
+
+    private func seedFull() {
+        booking.start(course: SampleData.bethpageBlack)
+        let slots = SampleData.availability(for: SampleData.bethpageBlack, on: booking.date)
+        booking.slots = slots
+        booking.selectedTeeTime = slots.flatMap(\.teeTimes).first { !$0.isSoldOut }
+        booking.players = 2
+    }
+    #endif
 }

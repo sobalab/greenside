@@ -3,7 +3,7 @@ import SwiftUI
 /// The auth gate. Presented in the `.signIn` onboarding phase. Signing in (or
 /// continuing with Apple) advances the app into the main experience; the back
 /// control returns to the welcome screen. All actions are demo-friendly and never
-/// gate on real credentials. Restyled into the Birdie design language.
+/// gate on real credentials.
 struct SignInView: View {
     @Environment(AppState.self) private var appState
 
@@ -12,10 +12,10 @@ struct SignInView: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 28) {
+            VStack(alignment: .leading, spacing: Theme.Spacing.xl) {
                 header
 
-                VStack(spacing: 16) {
+                VStack(spacing: Theme.Spacing.md) {
                     SignInField(
                         eyebrow: "Email",
                         placeholder: "you@example.com",
@@ -30,88 +30,96 @@ struct SignInView: View {
                     )
                 }
 
-                VStack(spacing: 14) {
-                    PillButton(title: "Sign in", style: .volt, fill: true) {
-                        signIn()
-                    }
+                VStack(spacing: Theme.Spacing.md) {
+                    Button("Sign in") { signIn() }
+                        .buttonStyle(GSPrimaryButtonStyle())
 
-                    Button {
-                        Haptics.tap()
-                    } label: {
-                        Text("Forgot password?")
-                            .font(.body(14, .medium))
-                            .foregroundStyle(Theme.Palette.muted)
-                            .frame(maxWidth: .infinity)
-                    }
-                    .buttonStyle(PressScaleStyle())
+                    Button("Forgot password?") { }
+                        .font(Theme.Typography.callout)
+                        .foregroundStyle(Theme.Palette.accent)
+                        .frame(maxWidth: .infinity)
                 }
 
                 orDivider
 
-                PillButton(title: "Continue with Apple", icon: "apple.logo", style: .ink, fill: true) {
-                    signIn()
+                Button(action: signIn) {
+                    HStack(spacing: Theme.Spacing.xs) {
+                        Image(systemName: "apple.logo")
+                            .font(.system(size: 17, weight: .medium))
+                        Text("Continue with Apple")
+                            .font(Theme.Typography.button)
+                    }
+                    .foregroundStyle(Theme.Palette.onDark)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, Theme.Spacing.md)
+                    .background(
+                        Theme.Palette.ink,
+                        in: RoundedRectangle(cornerRadius: Theme.Radius.md, style: .continuous)
+                    )
                 }
+                .buttonStyle(.plain)
 
                 footer
-                    .padding(.top, 4)
+                    .padding(.top, Theme.Spacing.xs)
             }
-            .padding(.horizontal, 24)
-            .padding(.top, 8)
-            .padding(.bottom, 44)
+            .padding(.horizontal, Theme.screenPadding)
+            .padding(.top, Theme.Spacing.xs)
+            .padding(.bottom, Theme.Spacing.xxl)
         }
         .scrollDismissesKeyboard(.interactively)
-        .background(Theme.Palette.ground.ignoresSafeArea())
+        .background(Theme.Palette.background.ignoresSafeArea())
     }
 
     // MARK: - Sections
 
     private var header: some View {
-        VStack(alignment: .leading, spacing: 22) {
-            CircleIconButton(systemName: "chevron.left", style: .frosted) {
+        VStack(alignment: .leading, spacing: Theme.Spacing.lg) {
+            Button {
                 appState.phase = .welcome
+            } label: {
+                Image(systemName: "chevron.left")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(Theme.Palette.ink)
+                    .frame(width: 44, height: 44)
+                    .background(Theme.Palette.surfaceMuted, in: Circle())
             }
+            .buttonStyle(.plain)
 
-            VStack(alignment: .leading, spacing: 10) {
+            VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
                 Text("Welcome back")
-                    .font(.display(40, .bold))
-                    .foregroundStyle(Theme.Palette.charcoal)
-                    .fixedSize(horizontal: false, vertical: true)
+                    .font(Theme.Typography.largeTitle)
+                    .foregroundStyle(Theme.Palette.ink)
                 Text("Sign in to pick up where you left off.")
-                    .font(.body(16, .regular))
-                    .foregroundStyle(Theme.Palette.muted)
+                    .font(Theme.Typography.body)
+                    .foregroundStyle(Theme.Palette.inkSecondary)
             }
         }
     }
 
     private var orDivider: some View {
-        HStack(spacing: 14) {
+        HStack(spacing: Theme.Spacing.md) {
             line
             Text("or")
-                .font(.body(13, .medium))
-                .foregroundStyle(Theme.Palette.muted)
+                .font(Theme.Typography.footnote)
+                .foregroundStyle(Theme.Palette.inkTertiary)
             line
         }
     }
 
     private var line: some View {
-        RoundedRectangle(cornerRadius: 1, style: .continuous)
-            .fill(Theme.Palette.charcoal.opacity(0.08))
+        Rectangle()
+            .fill(Theme.Palette.hairline)
             .frame(height: 1)
     }
 
     private var footer: some View {
-        HStack(spacing: 5) {
+        HStack(spacing: 4) {
             Text("New to Greenside?")
-                .font(.body(14, .regular))
-                .foregroundStyle(Theme.Palette.muted)
-            Button {
-                signIn()
-            } label: {
-                Text("Create account")
-                    .font(.body(14, .semibold))
-                    .foregroundStyle(Theme.Palette.charcoal)
-            }
-            .buttonStyle(PressScaleStyle())
+                .font(Theme.Typography.callout)
+                .foregroundStyle(Theme.Palette.inkSecondary)
+            Button("Create account") { signIn() }
+                .font(Theme.Typography.callout)
+                .foregroundStyle(Theme.Palette.accent)
         }
         .frame(maxWidth: .infinity)
     }
@@ -125,9 +133,9 @@ struct SignInView: View {
 
 // MARK: - Field
 
-/// A labelled input row: a small uppercase eyebrow above a rounded paper surface
-/// hosting the field. Switches between a plain `TextField` and a `SecureField`
-/// based on `isSecure`; the email variant configures itself for email entry.
+/// A labelled input row: an eyebrow above a rounded white surface hosting the
+/// field. Switches between a plain `TextField` and a `SecureField` based on
+/// `isSecure`; the email variant configures itself for email entry.
 private struct SignInField: View {
     let eyebrow: String
     let placeholder: String
@@ -135,12 +143,8 @@ private struct SignInField: View {
     let isSecure: Bool
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(eyebrow)
-                .font(.body(12, .semibold))
-                .tracking(0.8)
-                .textCase(.uppercase)
-                .foregroundStyle(Theme.Palette.muted)
+        VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
+            EyebrowText(eyebrow)
 
             Group {
                 if isSecure {
@@ -154,15 +158,18 @@ private struct SignInField: View {
                         .autocorrectionDisabled()
                 }
             }
-            .font(.body(16, .regular))
-            .foregroundStyle(Theme.Palette.charcoal)
-            .tint(Theme.Palette.volt)
-            .padding(.horizontal, 18)
-            .padding(.vertical, 16)
+            .font(Theme.Typography.body)
+            .foregroundStyle(Theme.Palette.ink)
+            .tint(Theme.Palette.primary)
+            .padding(.horizontal, Theme.Spacing.md)
+            .padding(.vertical, Theme.Spacing.md - 2)
             .background(
-                RoundedRectangle(cornerRadius: 18, style: .continuous)
-                    .fill(Theme.Palette.paper)
-                    .shadow(color: .black.opacity(0.05), radius: 14, y: 6)
+                Theme.Palette.surface,
+                in: RoundedRectangle(cornerRadius: Theme.Radius.md, style: .continuous)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: Theme.Radius.md, style: .continuous)
+                    .stroke(Theme.Palette.hairline, lineWidth: 1)
             )
         }
     }

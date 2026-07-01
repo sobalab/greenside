@@ -1,8 +1,8 @@
 import SwiftUI
 
-/// The Book tab root: hosts the Tee sheet and drives the confirmation push. The
-/// player picker is presented as a sheet from the Tee sheet, so the only pushed
-/// destination in the flow is the confirmation.
+/// Root of the Book tab. Owns the wizard's `NavigationStack`, binding it to the
+/// shared booking view model's path so the flow (slots → confirm profile →
+/// review & pay → confirmation) is fully driven by `appState.booking`.
 struct BookRootView: View {
     @Environment(AppState.self) private var appState
 
@@ -11,8 +11,15 @@ struct BookRootView: View {
 
         NavigationStack(path: $booking.path) {
             BookSlotsView()
-                .navigationDestination(for: BookingRoute.self) { _ in
-                    ConfirmationView()
+                .navigationDestination(for: BookingRoute.self) { route in
+                    switch route {
+                    case .confirmProfile:
+                        ConfirmProfileView()
+                    case .reviewAndPay:
+                        ReviewAndPayView()
+                    case .confirmation:
+                        ConfirmationView()
+                    }
                 }
         }
     }

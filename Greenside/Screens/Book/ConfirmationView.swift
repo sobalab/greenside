@@ -1,71 +1,76 @@
 import SwiftUI
 
-/// Terminal success screen — Birdie style. A living dawn-gradient emblem, an
-/// oversized headline, and a paper summary card. Reads the confirmed booking
-/// (falling back to the live draft) so it always renders gracefully.
+/// Terminal success screen of the booking wizard. Reads the finished booking
+/// from `appState.booking.confirmedBooking` (falling back to the in-flight
+/// `draft` so it always renders gracefully) and offers a celebratory summary
+/// with two exits: back to Home or straight to the user's rounds.
 struct ConfirmationView: View {
     @Environment(AppState.self) private var appState
 
     var body: some View {
         @Bindable var booking = appState.booking
+
+        // Prefer the server-confirmed booking, but degrade to the live draft so
+        // the screen never renders empty even if we arrive without a result.
         let result = booking.confirmedBooking ?? booking.draft
 
-        ScrollView {
-            VStack(spacing: 24) {
-                Spacer(minLength: 40)
+        ZStack {
+            Theme.Palette.background
+                .ignoresSafeArea()
 
-                SuccessEmblem()
+            ScrollView {
+                VStack(spacing: Theme.Spacing.xl) {
+                    Spacer(minLength: Theme.Spacing.xxl)
 
-                VStack(spacing: 8) {
-                    Text("You're booked!")
-                        .font(.display(44, .bold))
-                        .foregroundStyle(Theme.Palette.charcoal)
-                    Text("Your tee time is confirmed.")
-                        .font(.body(16, .regular))
-                        .foregroundStyle(Theme.Palette.muted)
-                }
-                .multilineTextAlignment(.center)
+                    SuccessEmblem()
 
-                if let result {
-                    ConfirmationCard(booking: result)
-                    HStack(spacing: 6) {
-                        Image(systemName: "checkmark.seal.fill")
-                            .font(.system(size: 13))
-                        Text("Added to your rounds")
-                            .font(.body(13, .medium))
+                    VStack(spacing: Theme.Spacing.xs) {
+                        Text("You're booked!")
+                            .font(Theme.Typography.largeTitle)
+                            .foregroundStyle(Theme.Palette.ink)
+                        Text("Your tee time is confirmed.")
+                            .font(Theme.Typography.body)
+                            .foregroundStyle(Theme.Palette.inkSecondary)
                     }
-                    .foregroundStyle(Theme.Palette.muted)
-                }
+                    .multilineTextAlignment(.center)
 
-                Spacer(minLength: 20)
+                    if let result {
+                        ConfirmationCard(booking: result)
+
+                        Label("Added to your rounds", systemImage: "checkmark.seal.fill")
+                            .font(Theme.Typography.footnote)
+                            .foregroundStyle(Theme.Palette.accent)
+                    }
+
+                    Spacer(minLength: Theme.Spacing.lg)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.horizontal, Theme.screenPadding)
             }
-            .frame(maxWidth: .infinity)
-            .padding(.horizontal, 24)
         }
-        .background(Theme.Palette.ground.ignoresSafeArea())
         .safeAreaInset(edge: .bottom) {
-            VStack(spacing: 6) {
-                PillButton(title: "Done", style: .volt, fill: true) {
+            VStack(spacing: Theme.Spacing.sm) {
+                Button("Done") {
                     booking.reset()
                     appState.selectedTab = .home
                 }
-                Button {
-                    Haptics.tap()
+                .buttonStyle(GSPrimaryButtonStyle())
+
+                Button("View my rounds") {
                     booking.reset()
                     appState.selectedTab = .profile
-                } label: {
-                    Text("View my rounds")
-                        .font(.body(15, .semibold))
-                        .foregroundStyle(Theme.Palette.charcoal)
-                        .padding(.vertical, 8)
                 }
-                .buttonStyle(PressScaleStyle())
+                .font(Theme.Typography.button)
+                .foregroundStyle(Theme.Palette.accent)
+                .padding(.vertical, Theme.Spacing.xxs)
             }
-            .padding(.horizontal, 24)
-            .padding(.top, 10)
-            .padding(.bottom, 8)
-            .background(Theme.Palette.ground)
+            .padding(.horizontal, Theme.screenPadding)
+            .padding(.top, Theme.Spacing.sm)
+            .padding(.bottom, Theme.Spacing.xs)
+            .background(Theme.Palette.background.opacity(0.98))
         }
+        .navigationTitle("")
+        .navigationBarTitleDisplayMode(.inline)
         .navigationBarBackButtonHidden(true)
         .toolbar(.hidden, for: .navigationBar)
     }
@@ -73,57 +78,61 @@ struct ConfirmationView: View {
 
 // MARK: - Success emblem
 
+/// The large gradient circle with a bold white checkmark, wrapped in a soft
+/// concentric halo to give the moment a little lift.
 private struct SuccessEmblem: View {
     var body: some View {
         ZStack {
             Circle()
-                .fill(Theme.Palette.dawnStops[2].opacity(0.2))
-                .frame(width: 136, height: 136)
-            DawnGradient()
-                .frame(width: 100, height: 100)
-                .clipShape(Circle())
+                .fill(Theme.Palette.lime.opacity(0.18))
+                .frame(width: 132, height: 132)
+
+            Circle()
+                .fill(Theme.brandGradient)
+                .frame(width: 96, height: 96)
                 .overlay(
                     Image(systemName: "checkmark")
-                        .font(.system(size: 42, weight: .bold))
-                        .foregroundStyle(.white)
+                        .font(.system(size: 40, weight: .bold))
+                        .foregroundStyle(Theme.Palette.onDark)
                 )
-                .shadow(color: Theme.Palette.dawnStops[1].opacity(0.4), radius: 18, y: 10)
+                .shadow(color: Theme.Palette.primary.opacity(0.28), radius: 18, y: 10)
         }
     }
 }
 
 // MARK: - Confirmation card
 
+/// White card summarizing the confirmed round: course, key stats, and the
+/// dashed confirmation-code pill.
 private struct ConfirmationCard: View {
     let booking: Booking
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 18) {
-            VStack(alignment: .leading, spacing: 2) {
+        VStack(alignment: .leading, spacing: Theme.Spacing.md) {
+            VStack(alignment: .leading, spacing: Theme.Spacing.xxs) {
                 Text(booking.course.name)
-                    .font(.display(24, .bold))
-                    .foregroundStyle(Theme.Palette.charcoal)
+                    .font(Theme.Typography.title2)
+                    .foregroundStyle(Theme.Palette.ink)
                 Text(booking.course.location)
-                    .font(.body(13, .regular))
-                    .foregroundStyle(Theme.Palette.muted)
+                    .font(Theme.Typography.footnote)
+                    .foregroundStyle(Theme.Palette.inkSecondary)
             }
 
-            Rectangle().fill(Theme.Palette.mist).frame(height: 1)
+            Divider()
+                .overlay(Theme.Palette.hairline)
 
             HStack(alignment: .top) {
-                MetricBlock(value: Self.shortDate(booking.date), unit: "date", tone: .muted, size: 22).fixedSize()
-                Spacer(minLength: 8)
-                MetricBlock(value: booking.teeTime.timeDisplay, unit: "tee", tone: .muted, size: 22).fixedSize()
-                Spacer(minLength: 8)
-                MetricBlock(value: "\(booking.players)", unit: "players", tone: .volt, size: 22).fixedSize()
+                StatColumn(label: "Date", value: Self.shortDate(booking.date))
+                Spacer(minLength: Theme.Spacing.sm)
+                StatColumn(label: "Tee time", value: booking.teeTime.timeDisplay, alignment: .center)
+                Spacer(minLength: Theme.Spacing.sm)
+                StatColumn(label: "Players", value: "\(booking.players)", alignment: .trailing)
             }
 
             CodePill(code: booking.confirmationCode)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(20)
-        .background(Theme.Palette.paper, in: RoundedRectangle(cornerRadius: 28, style: .continuous))
-        .shadow(color: .black.opacity(0.05), radius: 16, y: 8)
+        .gsCard(padding: Theme.Spacing.lg, cornerRadius: Theme.Radius.lg)
     }
 
     private static func shortDate(_ date: Date) -> String {
@@ -133,34 +142,33 @@ private struct ConfirmationCard: View {
     }
 }
 
-// MARK: - Code pill
+// MARK: - Confirmation code pill
 
 private struct CodePill: View {
     let code: String
 
     var body: some View {
         HStack {
-            Text("Confirmation")
-                .font(.body(12, .semibold))
-                .tracking(1.0)
-                .textCase(.uppercase)
-                .foregroundStyle(Theme.Palette.muted)
-            Spacer(minLength: 8)
+            EyebrowText("Confirmation")
+            Spacer(minLength: Theme.Spacing.sm)
             Text(code.isEmpty ? "—" : code)
-                .font(.body(16, .semibold))
-                .foregroundStyle(Theme.Palette.charcoal)
+                .font(Theme.Typography.headline)
+                .foregroundStyle(Theme.Palette.primary)
                 .tracking(1.5)
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 14)
+        .padding(.horizontal, Theme.Spacing.md)
+        .padding(.vertical, Theme.Spacing.sm + 2)
         .frame(maxWidth: .infinity)
         .background(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .fill(Theme.Palette.mist.opacity(0.6))
+            RoundedRectangle(cornerRadius: Theme.Radius.sm, style: .continuous)
+                .fill(Theme.Palette.surfaceMuted.opacity(0.6))
         )
         .overlay(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .strokeBorder(Theme.Palette.muted.opacity(0.4), style: StrokeStyle(lineWidth: 1.2, dash: [6]))
+            RoundedRectangle(cornerRadius: Theme.Radius.sm, style: .continuous)
+                .strokeBorder(
+                    Theme.Palette.primary.opacity(0.35),
+                    style: StrokeStyle(lineWidth: 1.2, dash: [6])
+                )
         )
     }
 }
@@ -168,6 +176,8 @@ private struct CodePill: View {
 #Preview {
     let state = AppState()
     state.booking.start(course: SampleData.pebbleBeach)
-    return NavigationStack { ConfirmationView() }
-        .environment(state)
+    return NavigationStack {
+        ConfirmationView()
+    }
+    .environment(state)
 }

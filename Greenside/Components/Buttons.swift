@@ -9,10 +9,10 @@ struct GSPrimaryButtonStyle: ButtonStyle {
             .foregroundStyle(Theme.Palette.onDark)
             .frame(maxWidth: .infinity)
             .padding(.vertical, Theme.Spacing.md)
-            .background(
-                (enabled ? Theme.Palette.primary : Theme.Palette.inkTertiary),
-                in: RoundedRectangle(cornerRadius: Theme.Radius.md, style: .continuous)
-            )
+            .background {
+                RoundedRectangle(cornerRadius: Theme.Radius.md, style: .continuous)
+                    .fill(enabled ? AnyShapeStyle(Theme.brandGradient) : AnyShapeStyle(Theme.Palette.inkTertiary))
+            }
             .opacity(configuration.isPressed ? 0.85 : 1)
             .scaleEffect(configuration.isPressed ? 0.98 : 1)
             .animation(.easeOut(duration: 0.15), value: configuration.isPressed)
