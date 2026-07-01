@@ -10,12 +10,25 @@ enum AppPhase {
     case main
 }
 
+/// The four main tabs. Held in `AppState` so screens can switch tabs
+/// programmatically (e.g. Home's "Browse courses" action, or "Book" from a
+/// course detail screen).
+enum AppTab: Hashable {
+    case home
+    case browse
+    case book
+    case profile
+}
+
 /// App-wide state and dependency container. Holds the shared `GreensideService`
 /// and hands out view models. Injected into the environment at the root.
 @MainActor
 @Observable
 final class AppState {
-    var phase: AppPhase = .main
+    var phase: AppPhase = .welcome
+
+    /// The currently-selected main tab. Screens mutate this to jump tabs.
+    var selectedTab: AppTab = .home
 
     /// The single service instance for the whole app. Swap `MockGreensideService`
     /// for a networked implementation here and nothing else changes.
