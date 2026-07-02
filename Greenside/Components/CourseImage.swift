@@ -10,13 +10,21 @@ struct CourseImage: View {
     let course: Course
 
     var body: some View {
-        if let image = UIImage(named: course.imageName) {
-            Image(uiImage: image)
-                .resizable()
-                .scaledToFill()
-        } else {
-            CourseImagePlaceholder(seed: course.name)
-        }
+        // Drive layout size from a flexible `Color.clear` and draw the photo as a
+        // non-sizing overlay. A bare `Image(...).scaledToFill()` reports the
+        // *filled* (oversized) width as its layout size, which can push a parent
+        // (e.g. the detail hero's ZStack) wider than the screen. This keeps the
+        // view exactly the size its frame is given; callers still clip.
+        Color.clear
+            .overlay {
+                if let image = UIImage(named: course.imageName) {
+                    Image(uiImage: image)
+                        .resizable()
+                        .scaledToFill()
+                } else {
+                    CourseImagePlaceholder(seed: course.name)
+                }
+            }
     }
 }
 

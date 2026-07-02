@@ -20,6 +20,8 @@ protocol GreensideService {
     func fetchCourses() async -> [Course]
     /// Courses recommended for the Home "Recommended near you" row.
     func fetchRecommended() async -> [Course]
+    /// Courses the user has hearted (Book tab "Your favorites").
+    func favoriteCourses() async -> [Course]
     /// Look up a single course by id.
     func course(id: UUID) async -> Course?
     /// Search + filter the catalog.

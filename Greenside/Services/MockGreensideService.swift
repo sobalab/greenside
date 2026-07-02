@@ -28,6 +28,11 @@ actor MockGreensideService: GreensideService {
         return courses.sorted { $0.rating > $1.rating }
     }
 
+    func favoriteCourses() async -> [Course] {
+        await simulateLatency()
+        return SampleData.favoriteCourses
+    }
+
     func course(id: UUID) async -> Course? {
         courses.first { $0.id == id }
     }

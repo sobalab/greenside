@@ -8,12 +8,15 @@ import SwiftUI
 struct BookSlotsView: View {
     @Environment(AppState.self) private var appState
 
+    @State private var favorites: [Course] = []
+    @State private var playedCourses: [Course] = []
+
     var body: some View {
         @Bindable var booking = appState.booking
 
         Group {
             if booking.course == nil {
-                emptyState
+                landing
             } else {
                 content(booking: booking)
             }
@@ -26,42 +29,127 @@ struct BookSlotsView: View {
             if booking.slots.isEmpty {
                 await booking.loadAvailability()
             }
+            await loadLanding()
         }
     }
 
-    // MARK: - Empty state
+    // MARK: - Landing (no course selected yet)
 
-    private var emptyState: some View {
-        VStack(spacing: Theme.Spacing.md) {
-            Spacer(minLength: 0)
+    /// The Book tab's starting point: jump back into a favorite or a course
+    /// you've played, or head to Browse to find something new.
+    private var landing: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: Theme.Spacing.xxl) {
+                VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
+                    EyebrowText("Book a tee time")
+                    Text("Start a\nround")
+                        .font(Theme.Typography.display(40, .bold))
+                        .foregroundStyle(Theme.Palette.ink)
+                        .lineLimit(2)
+                        .minimumScaleFactor(0.7)
+                        .fixedSize(horizontal: false, vertical: true)
+                    Text("Jump back into a favorite, replay a course you love, or explore something new.")
+                        .font(Theme.Typography.body)
+                        .foregroundStyle(Theme.Palette.inkSecondary)
+                        .padding(.top, Theme.Spacing.xxs)
+                }
 
-            Image(systemName: "flag.fill")
-                .font(.system(size: 52, weight: .semibold))
-                .foregroundStyle(Theme.Palette.inkTertiary)
+                if !favorites.isEmpty {
+                    courseRail(eyebrow: "Hearted courses", title: "Your favorites", courses: favorites, hearted: true)
+                }
+                if !playedCourses.isEmpty {
+                    courseRail(eyebrow: "Recently played", title: "Play again", courses: playedCourses, hearted: false)
+                }
 
-            VStack(spacing: Theme.Spacing.xs) {
-                Text("Pick a course to book")
-                    .font(Theme.Typography.title)
-                    .foregroundStyle(Theme.Palette.ink)
-                Text("Browse our courses and start a booking.")
-                    .font(Theme.Typography.body)
-                    .foregroundStyle(Theme.Palette.inkSecondary)
-                    .multilineTextAlignment(.center)
+                browseCard
             }
-            .padding(.horizontal, Theme.Spacing.xl)
-
-            Button("Browse courses") {
-                appState.selectedTab = .browse
-            }
-            .buttonStyle(GSPrimaryButtonStyle())
+            .padding(.horizontal, Theme.screenPadding)
             .padding(.top, Theme.Spacing.xs)
-            .padding(.horizontal, Theme.Spacing.xxl)
-
-            Spacer(minLength: 0)
-            Spacer(minLength: 0)
+            .padding(.bottom, Theme.Spacing.xxl)
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .padding(.horizontal, Theme.screenPadding)
+    }
+
+    private func courseRail(eyebrow: String, title: String, courses: [Course], hearted: Bool) -> some View {
+        VStack(alignment: .leading, spacing: Theme.Spacing.md) {
+            VStack(alignment: .leading, spacing: 2) {
+                EyebrowText(eyebrow)
+                Text(title)
+                    .font(Theme.Typography.title2)
+                    .foregroundStyle(Theme.Palette.ink)
+            }
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(alignment: .top, spacing: Theme.Spacing.md) {
+                    ForEach(courses) { course in
+                        Button {
+                            startBooking(course)
+                        } label: {
+                            BookCourseCard(course: course, hearted: hearted)
+                        }
+                        .buttonStyle(PressScaleStyle())
+                    }
+                }
+                .padding(.horizontal, Theme.screenPadding)
+            }
+            // Let the rail bleed to the screen edges while cards align to the inset.
+            .padding(.horizontal, -Theme.screenPadding)
+        }
+    }
+
+    private var browseCard: some View {
+        Button {
+            Haptics.tap()
+            appState.selectedTab = .browse
+        } label: {
+            HStack(spacing: Theme.Spacing.md) {
+                Image(systemName: "magnifyingglass")
+                    .font(.system(size: 20, weight: .semibold))
+                    .foregroundStyle(Theme.Palette.primary)
+                    .frame(width: 44, height: 44)
+                    .background(
+                        Theme.Palette.surfaceMuted,
+                        in: RoundedRectangle(cornerRadius: Theme.Radius.sm, style: .continuous)
+                    )
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Browse all courses")
+                        .font(Theme.Typography.headline)
+                        .foregroundStyle(Theme.Palette.ink)
+                    Text("Explore every course near you")
+                        .font(Theme.Typography.footnote)
+                        .foregroundStyle(Theme.Palette.inkSecondary)
+                }
+                Spacer(minLength: Theme.Spacing.sm)
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(Theme.Palette.inkTertiary)
+            }
+            .gsCard()
+        }
+        .buttonStyle(PressScaleStyle())
+    }
+
+    /// Begin a booking for a tapped favorite / previously-played course. Sets the
+    /// shared wizard state and loads that course's availability, which flips this
+    /// screen from the landing to the tee-time step.
+    private func startBooking(_ course: Course) {
+        Haptics.impact()
+        appState.booking.start(course: course)
+        Task { await appState.booking.loadAvailability() }
+    }
+
+    private func loadLanding() async {
+        if favorites.isEmpty {
+            favorites = await appState.service.favoriteCourses()
+        }
+        if playedCourses.isEmpty {
+            let now = Date()
+            let rounds = await appState.service.myRounds().filter { $0.date < now }
+            var seen = Set<UUID>()
+            playedCourses = rounds.compactMap { round in
+                guard !seen.contains(round.course.id) else { return nil }
+                seen.insert(round.course.id)
+                return round.course
+            }
+        }
     }
 
     // MARK: - Main content
@@ -474,6 +562,50 @@ private struct TeeTimeRow: View {
     private var subtitleColor: Color {
         if teeTime.isSoldOut { return Theme.Palette.inkTertiary }
         return onDark ? Theme.Palette.onDarkSecondary : Theme.Palette.inkTertiary
+    }
+}
+
+// MARK: - Book landing course card
+
+/// Compact course card for the Book landing rails. Tapping it starts a booking
+/// for that course. Favorites get a small heart badge over the image.
+private struct BookCourseCard: View {
+    let course: Course
+    var hearted: Bool = false
+
+    private let cardWidth: CGFloat = 210
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
+            CourseImage(course: course)
+                .frame(width: cardWidth, height: 124)
+                .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.md, style: .continuous))
+                .overlay(alignment: .topTrailing) {
+                    if hearted {
+                        Image(systemName: "heart.fill")
+                            .font(.system(size: 12, weight: .bold))
+                            .foregroundStyle(.white)
+                            .padding(7)
+                            .background(Theme.Palette.accent, in: Circle())
+                            .shadow(color: .black.opacity(0.18), radius: 5, y: 2)
+                            .padding(Theme.Spacing.xs)
+                    }
+                }
+
+            VStack(alignment: .leading, spacing: Theme.Spacing.xxs) {
+                Text(course.name)
+                    .font(Theme.Typography.headline)
+                    .foregroundStyle(Theme.Palette.ink)
+                    .lineLimit(1)
+                Text(course.location)
+                    .font(Theme.Typography.footnote)
+                    .foregroundStyle(Theme.Palette.inkSecondary)
+                    .lineLimit(1)
+                RatingLabel(rating: course.rating, trailing: course.priceDisplay)
+                    .padding(.top, 2)
+            }
+        }
+        .frame(width: cardWidth, alignment: .leading)
     }
 }
 

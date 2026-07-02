@@ -326,6 +326,11 @@ enum SampleData {
         stAndrews, royalCountyDown, torreyPines, whistlingStraits, oakmont,
     ]
 
+    /// Courses the golfer has hearted — powers the Book tab "Your favorites" rail.
+    static let favoriteCourses: [Course] = [
+        stAndrews, royalCountyDown, torreyPines, whistlingStraits,
+    ]
+
     // MARK: - User
 
     static let joe = UserProfile(
