@@ -1,0 +1,12 @@
+{
+  "images" : [
+    {
+      "filename" : "course_st_andrews.jpg",
+      "idiom" : "universal"
+    }
+  ],
+  "info" : {
+    "author" : "xcode",
+    "version" : 1
+  }
+}

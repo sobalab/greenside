@@ -1,0 +1,12 @@
+{
+  "images" : [
+    {
+      "filename" : "course_augusta.jpg",
+      "idiom" : "universal"
+    }
+  ],
+  "info" : {
+    "author" : "xcode",
+    "version" : 1
+  }
+}

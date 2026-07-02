@@ -1,0 +1,12 @@
+{
+  "images" : [
+    {
+      "filename" : "course_bethpage.jpg",
+      "idiom" : "universal"
+    }
+  ],
+  "info" : {
+    "author" : "xcode",
+    "version" : 1
+  }
+}
