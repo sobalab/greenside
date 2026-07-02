@@ -11,8 +11,12 @@ struct Course: Identifiable, Hashable {
     var designer: String?
     var rating: Double            // 0...5, e.g. 4.9
     var reviewCount: Int
-    /// Starting green fee in whole US dollars.
+    /// Starting green fee in whole US dollars. When the course is on a hot deal
+    /// this is the *discounted* price; `originalFee` holds the pre-deal price.
     var greenFee: Int
+    /// The pre-discount green fee, set only when the course is on a hot deal and
+    /// strictly greater than `greenFee`. `nil` means the course is at list price.
+    var originalFee: Int? = nil
     /// Distance from the user in miles (for "near you" sorting).
     var distanceMiles: Double
     /// How many tee times remain today (drives the "N slots" label).
@@ -26,6 +30,18 @@ struct Course: Identifiable, Hashable {
 
     var priceDisplay: String { "$\(greenFee)" }
     var ratingDisplay: String { String(format: "%.1f", rating) }
+
+    /// True when a discounted `greenFee` sits below a set `originalFee`.
+    var isHotDeal: Bool {
+        guard let originalFee else { return false }
+        return originalFee > greenFee
+    }
+
+    /// Whole-percent savings off the original fee, or `nil` when not on deal.
+    var discountPercent: Int? {
+        guard let originalFee, originalFee > greenFee else { return nil }
+        return Int((Double(originalFee - greenFee) / Double(originalFee) * 100).rounded())
+    }
 }
 
 /// Marketing / filter tags shown as chips.

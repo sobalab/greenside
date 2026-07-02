@@ -46,6 +46,8 @@ actor MockGreensideService: GreensideService {
 
         for filter in filters {
             switch filter {
+            case .hotDeals:
+                results = results.filter(\.isHotDeal)
             case .nearby:
                 results = results.filter { $0.distanceMiles <= 6 }
             case .topRated:
@@ -54,8 +56,6 @@ actor MockGreensideService: GreensideService {
                 results = results.filter { $0.slotsAvailableToday > 0 }
             case .underHundred:
                 results = results.filter { $0.greenFee < 100 }
-            case .links:
-                results = results.filter { $0.tags.contains(.links) }
             case .championship:
                 results = results.filter { $0.tags.contains(.championship) }
             }

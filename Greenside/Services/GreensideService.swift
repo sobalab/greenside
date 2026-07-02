@@ -2,11 +2,11 @@ import Foundation
 
 /// Filters available on the Browse screen (rendered as chips).
 enum CourseFilter: String, CaseIterable, Identifiable, Hashable {
+    case hotDeals = "Hot deals"
     case nearby = "Nearby"
     case topRated = "Top rated"
     case availableToday = "Available today"
     case underHundred = "Under $100"
-    case links = "Links"
     case championship = "Championship"
 
     var id: String { rawValue }

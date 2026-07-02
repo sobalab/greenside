@@ -254,6 +254,7 @@ private struct BrowseCourseCard: View {
                     }
                     .padding(Theme.Spacing.sm)
                 }
+                .overlay(alignment: .topTrailing) { dealBadge }
 
             HStack(alignment: .bottom, spacing: Theme.Spacing.md) {
                 VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
@@ -284,17 +285,43 @@ private struct BrowseCourseCard: View {
         .gsCard(padding: Theme.Spacing.sm)
     }
 
+    /// A "SAVE N%" flame pill shown over the hero when the course is on a deal.
+    @ViewBuilder
+    private var dealBadge: some View {
+        if let percent = course.discountPercent {
+            HStack(spacing: 4) {
+                Image(systemName: "flame.fill")
+                    .font(.system(size: 10, weight: .bold))
+                Text("SAVE \(percent)%")
+                    .font(Theme.Typography.caption)
+            }
+            .foregroundStyle(.white)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+            .background(Theme.Palette.accent, in: Capsule())
+            .shadow(color: .black.opacity(0.18), radius: 6, y: 2)
+            .padding(Theme.Spacing.sm)
+        }
+    }
+
     private var greenFee: some View {
         VStack(alignment: .trailing, spacing: 0) {
+            if course.isHotDeal, let originalFee = course.originalFee {
+                Text("$\(originalFee)")
+                    .font(Theme.Typography.footnote)
+                    .foregroundStyle(Theme.Palette.inkTertiary)
+                    .strikethrough(true, color: Theme.Palette.inkTertiary)
+                    .lineLimit(1)
+            }
             Text("$\(course.greenFee)")
                 .font(Theme.Typography.display(28, .bold))
-                .foregroundStyle(Theme.Palette.primary)
+                .foregroundStyle(course.isHotDeal ? Theme.Palette.accent : Theme.Palette.primary)
                 .contentTransition(.numericText())
                 .lineLimit(1)
                 .minimumScaleFactor(0.8)
-            Text("green fee")
+            Text(course.isHotDeal ? "deal price" : "green fee")
                 .font(Theme.Typography.caption)
-                .foregroundStyle(Theme.Palette.inkTertiary)
+                .foregroundStyle(course.isHotDeal ? Theme.Palette.accent : Theme.Palette.inkTertiary)
         }
         .fixedSize()
     }
