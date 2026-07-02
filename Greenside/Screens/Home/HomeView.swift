@@ -10,6 +10,7 @@ struct HomeView: View {
     @State private var profile: UserProfile?
     @State private var next: Booking?
     @State private var recommended: [Course] = []
+    @State private var pastRounds: [Booking] = []
 
     var body: some View {
         NavigationStack {
@@ -17,6 +18,7 @@ struct HomeView: View {
                 VStack(alignment: .leading, spacing: Theme.Spacing.xxl) {
                     header
                     heroSection
+                    previousRoundsSection
                     quickActions
                     recommendedSection
                 }
@@ -35,6 +37,8 @@ struct HomeView: View {
                 profile = await appState.service.currentUser()
                 next = await appState.service.nextRound()
                 recommended = await appState.service.fetchRecommended()
+                let now = Date()
+                pastRounds = await appState.service.myRounds().filter { $0.date < now }
             }
         }
     }
@@ -130,6 +134,35 @@ struct HomeView: View {
             }
             // Let the rail bleed to the screen edges while cards align to the inset.
             .padding(.horizontal, -Theme.screenPadding)
+        }
+    }
+
+    // MARK: - Previous rounds
+
+    @ViewBuilder
+    private var previousRoundsSection: some View {
+        if !pastRounds.isEmpty {
+            VStack(alignment: .leading, spacing: Theme.Spacing.md) {
+                SectionHeader(title: "Previous rounds played", actionTitle: "See all") {
+                    appState.selectedTab = .profile
+                }
+                VStack(spacing: 0) {
+                    ForEach(Array(pastRounds.prefix(3).enumerated()), id: \.element.id) { index, booking in
+                        NavigationLink(value: booking.course) {
+                            PastRoundRow(booking: booking)
+                        }
+                        .buttonStyle(PressScaleStyle())
+                        .simultaneousGesture(TapGesture().onEnded { Haptics.selection() })
+
+                        if index < min(pastRounds.count, 3) - 1 {
+                            Divider()
+                                .overlay(Theme.Palette.hairline)
+                                .padding(.leading, 52 + Theme.Spacing.sm)
+                        }
+                    }
+                }
+                .gsCard(padding: Theme.Spacing.xs)
+            }
         }
     }
 
@@ -373,6 +406,52 @@ private struct RecommendedCourseCard: View {
             }
         }
         .frame(width: cardWidth, alignment: .leading)
+    }
+}
+
+// MARK: - Past round row
+
+/// Compact row for a previously played round on the Home screen: course thumb,
+/// name + when it was played, and a trailing score-style player count.
+private struct PastRoundRow: View {
+    let booking: Booking
+
+    var body: some View {
+        HStack(spacing: Theme.Spacing.sm) {
+            CourseImage(course: booking.course)
+                .frame(width: 52, height: 52)
+                .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.sm, style: .continuous))
+
+            VStack(alignment: .leading, spacing: 3) {
+                Text(booking.course.name)
+                    .font(Theme.Typography.headline)
+                    .foregroundStyle(Theme.Palette.ink)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+                Text("\(booking.dateDisplay) · \(booking.course.location)")
+                    .font(Theme.Typography.footnote)
+                    .foregroundStyle(Theme.Palette.inkSecondary)
+                    .lineLimit(1)
+            }
+
+            Spacer(minLength: Theme.Spacing.sm)
+
+            HStack(alignment: .firstTextBaseline, spacing: 2) {
+                Text("\(booking.players)")
+                    .font(Theme.Typography.title2)
+                    .foregroundStyle(Theme.Palette.ink)
+                Text(booking.players == 1 ? "player" : "players")
+                    .font(Theme.Typography.caption)
+                    .foregroundStyle(Theme.Palette.inkTertiary)
+            }
+
+            Image(systemName: "chevron.right")
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(Theme.Palette.inkTertiary)
+                .padding(.leading, 2)
+        }
+        .padding(.vertical, Theme.Spacing.sm)
+        .padding(.horizontal, Theme.Spacing.xs)
     }
 }
 

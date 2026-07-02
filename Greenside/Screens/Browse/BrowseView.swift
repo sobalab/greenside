@@ -64,12 +64,11 @@ struct BrowseView: View {
         VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
             EyebrowText("Explore")
 
-            Text("Browse\ncourses")
+            Text("Browse courses")
                 .font(Theme.Typography.display(38, .bold))
                 .foregroundStyle(Theme.Palette.ink)
-                .lineSpacing(-2)
-                .lineLimit(2)
-                .minimumScaleFactor(0.8)
+                .lineLimit(1)
+                .minimumScaleFactor(0.6)
                 .fixedSize(horizontal: false, vertical: true)
 
             countLine

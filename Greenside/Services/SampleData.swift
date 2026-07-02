@@ -166,8 +166,159 @@ enum SampleData {
         tags: [.publicAccess, .championship, .walkingOnly]
     )
 
+    static let stAndrews = Course(
+        id: UUID(),
+        name: "St Andrews Old Course",
+        location: "St Andrews, Scotland",
+        par: 72,
+        holes: 18,
+        lengthYards: 7305,
+        designer: "Old Tom Morris",
+        rating: 4.9,
+        reviewCount: 2041,
+        greenFee: 320,
+        distanceMiles: 15.6,
+        slotsAvailableToday: 4,
+        imageName: "course_st_andrews",
+        about: "The Home of Golf. Seven centuries of history over shared fairways, the Swilcan Bridge, the Road Hole, and double greens. Every golfer's pilgrimage.",
+        facilities: [
+            Facility(name: "Pro shop", systemImage: "bag.fill"),
+            Facility(name: "Driving range", systemImage: "figure.golf"),
+            Facility(name: "Restaurant", systemImage: "fork.knife"),
+            Facility(name: "Caddies", systemImage: "figure.walk"),
+            Facility(name: "Club rental", systemImage: "briefcase.fill"),
+        ],
+        reviews: [
+            Review(authorName: "Angus F.", rating: 5, date: date(daysFromNow: -4),
+                   text: "Walking the Swilcan Bridge brought a tear to my eye. Pure history."),
+            Review(authorName: "Claire H.", rating: 5, date: date(daysFromNow: -19),
+                   text: "The Road Hole is terrifying and I loved every second."),
+        ],
+        tags: [.links, .championship, .walkingOnly]
+    )
+
+    static let royalCountyDown = Course(
+        id: UUID(),
+        name: "Royal County Down",
+        location: "Newcastle, Northern Ireland",
+        par: 71,
+        holes: 18,
+        lengthYards: 7186,
+        designer: "Old Tom Morris",
+        rating: 4.9,
+        reviewCount: 587,
+        greenFee: 365,
+        distanceMiles: 22.9,
+        slotsAvailableToday: 3,
+        imageName: "course_royal_county_down",
+        about: "Framed by the Mourne Mountains and Dundrum Bay, its blind tee shots and bearded bunkers routinely rank it the finest links on earth.",
+        facilities: [
+            Facility(name: "Pro shop", systemImage: "bag.fill"),
+            Facility(name: "Restaurant", systemImage: "fork.knife"),
+            Facility(name: "Caddies", systemImage: "figure.walk"),
+            Facility(name: "Locker room", systemImage: "lock.fill"),
+        ],
+        reviews: [
+            Review(authorName: "Declan M.", rating: 5, date: date(daysFromNow: -7),
+                   text: "The most beautiful setting in golf. Blind shots keep you honest."),
+        ],
+        tags: [.links, .championship]
+    )
+
+    static let torreyPines = Course(
+        id: UUID(),
+        name: "Torrey Pines (South)",
+        location: "La Jolla, CA",
+        par: 72,
+        holes: 18,
+        lengthYards: 7802,
+        designer: "William F. Bell",
+        rating: 4.6,
+        reviewCount: 1198,
+        greenFee: 285,
+        distanceMiles: 6.9,
+        slotsAvailableToday: 9,
+        imageName: "course_torrey_pines",
+        about: "A muscular municipal clifftop course above the Pacific. Two-time U.S. Open host and a permanent PGA Tour stop, open to anyone who can get a tee time.",
+        facilities: [
+            Facility(name: "Pro shop", systemImage: "bag.fill"),
+            Facility(name: "Driving range", systemImage: "figure.golf"),
+            Facility(name: "Restaurant", systemImage: "fork.knife"),
+            Facility(name: "Club rental", systemImage: "briefcase.fill"),
+            Facility(name: "Cart", systemImage: "car.fill"),
+        ],
+        reviews: [
+            Review(authorName: "Marisol V.", rating: 5, date: date(daysFromNow: -5),
+                   text: "Can't believe this is a muni. Ocean views on nearly every hole."),
+            Review(authorName: "Kevin O.", rating: 4, date: date(daysFromNow: -16),
+                   text: "Plays long and firm. Get the early tee time before the wind."),
+        ],
+        tags: [.publicAccess, .championship]
+    )
+
+    static let whistlingStraits = Course(
+        id: UUID(),
+        name: "Whistling Straits",
+        location: "Kohler, WI",
+        par: 72,
+        holes: 18,
+        lengthYards: 7790,
+        designer: "Pete Dye",
+        rating: 4.7,
+        reviewCount: 663,
+        greenFee: 470,
+        distanceMiles: 18.2,
+        slotsAvailableToday: 5,
+        imageName: "course_whistling_straits",
+        about: "A windswept Pete Dye links along two miles of Lake Michigan shoreline, with nearly a thousand bunkers. Host of the Ryder Cup and multiple PGA Championships.",
+        facilities: [
+            Facility(name: "Pro shop", systemImage: "bag.fill"),
+            Facility(name: "Driving range", systemImage: "figure.golf"),
+            Facility(name: "Restaurant", systemImage: "fork.knife"),
+            Facility(name: "Caddies", systemImage: "figure.walk"),
+            Facility(name: "Walking only", systemImage: "figure.walk"),
+        ],
+        reviews: [
+            Review(authorName: "Brett L.", rating: 5, date: date(daysFromNow: -11),
+                   text: "Feels like Ireland dropped onto Lake Michigan. Bring a caddie."),
+        ],
+        tags: [.links, .championship, .walkingOnly]
+    )
+
+    static let oakmont = Course(
+        id: UUID(),
+        name: "Oakmont Country Club",
+        location: "Oakmont, PA",
+        par: 70,
+        holes: 18,
+        lengthYards: 7255,
+        designer: "Henry Fownes",
+        rating: 4.8,
+        reviewCount: 512,
+        greenFee: 410,
+        distanceMiles: 14.7,
+        slotsAvailableToday: 2,
+        imageName: "course_oakmont",
+        about: "Widely considered the toughest course in America. Slick greens, the Church Pews bunker, and no water needed to terrify you. A record-setting U.S. Open host.",
+        facilities: [
+            Facility(name: "Pro shop", systemImage: "bag.fill"),
+            Facility(name: "Driving range", systemImage: "figure.golf"),
+            Facility(name: "Restaurant", systemImage: "fork.knife"),
+            Facility(name: "Caddies", systemImage: "figure.walk"),
+            Facility(name: "Locker room", systemImage: "lock.fill"),
+        ],
+        reviews: [
+            Review(authorName: "Hannah R.", rating: 5, date: date(daysFromNow: -8),
+                   text: "The greens are unfair in the best way. Three-putt city, still smiling."),
+            Review(authorName: "Theo C.", rating: 4, date: date(daysFromNow: -25),
+                   text: "Church Pews swallowed my drive. Respect the beast."),
+        ],
+        tags: [.parkland, .championship]
+    )
+
     static let courses: [Course] = [
         pebbleBeach, augustaNational, tpcSawgrass, pinehurst, bethpageBlack,
+        stAndrews, royalCountyDown, torreyPines, whistlingStraits, oakmont,
     ]
 
     // MARK: - User
@@ -212,6 +363,50 @@ enum SampleData {
         addOns: [],
         confirmationCode: "GS-8H2K9"
     )
+
+    // MARK: - Past rounds (Home "Previous rounds played" + Profile "My rounds")
+
+    static let pastRounds: [Booking] = [
+        Booking(
+            course: pebbleBeach,
+            date: date(daysFromNow: -8, hour: 8, minute: 20),
+            teeTime: TeeTime(
+                start: date(daysFromNow: -8, hour: 8, minute: 20),
+                period: .morning,
+                price: 595,
+                spotsLeft: 0
+            ),
+            players: 2,
+            addOns: [],
+            confirmationCode: "GS-4P7Q1"
+        ),
+        Booking(
+            course: pinehurst,
+            date: date(daysFromNow: -23, hour: 9, minute: 40),
+            teeTime: TeeTime(
+                start: date(daysFromNow: -23, hour: 9, minute: 40),
+                period: .morning,
+                price: 450,
+                spotsLeft: 0
+            ),
+            players: 4,
+            addOns: [],
+            confirmationCode: "GS-2M5X8"
+        ),
+        Booking(
+            course: tpcSawgrass,
+            date: date(daysFromNow: -41, hour: 13, minute: 0),
+            teeTime: TeeTime(
+                start: date(daysFromNow: -41, hour: 13, minute: 0),
+                period: .afternoon,
+                price: 550,
+                spotsLeft: 0
+            ),
+            players: 3,
+            addOns: [],
+            confirmationCode: "GS-9K3R2"
+        ),
+    ]
 
     // MARK: - Availability
 

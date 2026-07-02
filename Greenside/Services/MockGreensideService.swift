@@ -9,7 +9,7 @@ actor MockGreensideService: GreensideService {
     private var user: UserProfile = SampleData.joe
     private var activity: [LoyaltyActivity] = SampleData.loyaltyActivity
     private var upcoming: Booking? = SampleData.nextRound
-    private var rounds: [Booking] = [SampleData.nextRound]
+    private var rounds: [Booking] = [SampleData.nextRound] + SampleData.pastRounds
 
     /// Simulated network latency.
     private var latency: Duration = .milliseconds(250)
