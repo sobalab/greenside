@@ -47,12 +47,11 @@ struct ConfirmProfileView: View {
     private var header: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
             EyebrowText("Step 2 of 3")
-            Text("Your\ndetails")
+            Text("Your details")
                 .font(Theme.Typography.display(40, .bold))
                 .foregroundStyle(Theme.Palette.ink)
-                .lineLimit(2)
-                .minimumScaleFactor(0.7)
-                .fixedSize(horizontal: false, vertical: true)
+                .lineLimit(1)
+                .minimumScaleFactor(0.6)
             Text("Confirm who is playing.")
                 .font(Theme.Typography.body)
                 .foregroundStyle(Theme.Palette.inkSecondary)

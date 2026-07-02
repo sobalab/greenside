@@ -23,6 +23,22 @@ struct BookSlotsView: View {
         }
         .navigationTitle("Book")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .topBarLeading) {
+                // Once a course is chosen the tab bar is hidden for a focused
+                // flow, so offer an explicit way back to the Book landing.
+                if booking.course != nil {
+                    Button {
+                        Haptics.tap()
+                        booking.reset()
+                    } label: {
+                        Image(systemName: "xmark")
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundStyle(Theme.Palette.ink)
+                    }
+                }
+            }
+        }
         .background(Theme.Palette.background)
         .task {
             await booking.loadProfileIfNeeded()
@@ -166,12 +182,11 @@ struct BookSlotsView: View {
 
                 VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
                     EyebrowText("Step 1 of 3")
-                    Text("Pick a\ntee time")
+                    Text("Pick a tee time")
                         .font(Theme.Typography.display(40, .bold))
                         .foregroundStyle(Theme.Palette.ink)
-                        .lineLimit(2)
-                        .minimumScaleFactor(0.7)
-                        .fixedSize(horizontal: false, vertical: true)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.6)
                 }
 
                 dateSelector(booking: booking)
@@ -337,8 +352,11 @@ struct BookSlotsView: View {
 
     private func bottomBar(booking: BookingViewModel) -> some View {
         VStack(spacing: Theme.Spacing.sm) {
-            if let teeTime = booking.selectedTeeTime {
-                HStack(alignment: .lastTextBaseline) {
+            // Always render the summary at a fixed height so selecting a tee time
+            // never changes the bar's height — a growing bar would reflow the list
+            // under the user's finger and cause the wrong row to register.
+            HStack(alignment: .lastTextBaseline) {
+                if let teeTime = booking.selectedTeeTime {
                     VStack(alignment: .leading, spacing: 1) {
                         Text(teeTime.timeDisplay)
                             .font(Theme.Typography.headline)
@@ -359,10 +377,16 @@ struct BookSlotsView: View {
                             .font(Theme.Typography.caption)
                             .foregroundStyle(Theme.Palette.inkTertiary)
                     }
+                } else {
+                    Text("Select a tee time")
+                        .font(Theme.Typography.headline)
+                        .foregroundStyle(Theme.Palette.inkTertiary)
+                    Spacer(minLength: 0)
                 }
-                .animation(.spring(response: 0.4, dampingFraction: 0.85), value: booking.players)
-                .animation(.spring(response: 0.4, dampingFraction: 0.85), value: booking.selectedTeeTime?.id)
             }
+            .frame(height: 44)
+            .animation(.spring(response: 0.4, dampingFraction: 0.85), value: booking.players)
+            .animation(.spring(response: 0.4, dampingFraction: 0.85), value: booking.selectedTeeTime?.id)
 
             Button("Continue") {
                 Haptics.impact()
@@ -496,6 +520,7 @@ private struct TeeTimeRow: View {
                 RoundedRectangle(cornerRadius: Theme.Radius.md, style: .continuous)
                     .stroke(borderColor, lineWidth: isSelected ? 2 : 1)
             )
+            .contentShape(RoundedRectangle(cornerRadius: Theme.Radius.md, style: .continuous))
             .opacity(teeTime.isSoldOut ? 0.5 : 1)
         }
         .buttonStyle(PressScaleStyle())

@@ -60,12 +60,11 @@ struct ReviewAndPayView: View {
     private var header: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
             EyebrowText("Step 3 of 3")
-            Text("Review\n& pay")
+            Text("Review & pay")
                 .font(Theme.Typography.display(40, .bold))
                 .foregroundStyle(Theme.Palette.ink)
-                .lineLimit(2)
-                .minimumScaleFactor(0.8)
-                .fixedSize(horizontal: false, vertical: true)
+                .lineLimit(1)
+                .minimumScaleFactor(0.6)
         }
     }
 
